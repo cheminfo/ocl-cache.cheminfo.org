@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify/types/instance';
+import type { FastifyInstance } from 'fastify';
 
 import { getInfoFromIDCode } from '../db/getInfoFromIDCode.ts';
 

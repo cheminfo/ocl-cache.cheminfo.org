@@ -4,6 +4,11 @@ import workerpool from 'workerpool';
 
 const { MF } = MFParser;
 
+/**
+ * @param {string} molecule
+ * @param {string} mf
+ * @returns {Promise<any>}
+ */
 async function improve(molecule, mf) {
   //const mol = OCL.Molecule.fromIDCode(molecule);
   const mfInfo = new MF(mf).getInfo();

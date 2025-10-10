@@ -1,47 +1,23 @@
 {
   "name": "ocl-cache",
-  "version": "1.1.1",
-  "description": "Cache molecule directed information in sqlite3",
-  "main": "./src/index.ts",
   "private": true,
-  "type": "module",
-  "keywords": [],
-  "author": "Luc Patiny",
+  "version": "1.1.1",
   "license": "MIT",
-  "files": [
-    "src"
-  ],
+  "description": "Cache molecule directed information in sqlite3",
+  "author": "Luc Patiny",
+  "type": "module",
   "scripts": {
     "check-types": "tsc --noEmit",
-    "dev": "node --watch --experimental-strip-types --disable-warning=ExperimentalWarning ./src/server.ts",
-    "eslint": "eslint src --cache",
+    "dev": "node --watch ./src/server.ts",
+    "eslint": "eslint . --cache",
     "eslint-fix": "npm run eslint -- --fix",
-    "processSmiles": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/scripts/processSmiles.ts | pino-pretty",
-    "processSDF": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/scripts/processSDF.ts | pino-pretty",
-    "prettier": "prettier --check src",
-    "prettier-write": "prettier --write src",
-    "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./src/server.ts",
-    "test": "npm run test-only && npm run eslint && npm run prettier && npm run check-types",
+    "processSmiles": "node src/scripts/processSmiles.ts | pino-pretty",
+    "processSDF": "node src/scripts/processSDF.ts | pino-pretty",
+    "prettier": "prettier --check .",
+    "prettier-write": "prettier --write .",
+    "start": "node ./src/server.ts",
+    "test": "npm run test-only && npm run check-types && npm run eslint && npm run prettier",
     "test-only": "vitest run"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/cheminfo/ocl-cache.git"
-  },
-  "bugs": {
-    "url": "https://github.com/cheminfo/ocl-cache/issues"
-  },
-  "homepage": "https://github.com/cheminfo/ocl-cache#readme",
-  "devDependencies": {
-    "@types/node": "^24.3.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.34.0",
-    "eslint-config-cheminfo-typescript": "^19.0.0",
-    "globals": "^16.3.0",
-    "prettier": "^3.6.2",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
@@ -63,6 +39,28 @@
     "postgrator": "^8.0.0",
     "sdf-parser": "^7.0.4"
   },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/workerpool": "^6.4.7",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@zakodium/tsconfig": "^1.0.2",
+    "eslint": "^9.34.0",
+    "eslint-config-cheminfo-typescript": "^19.0.0",
+    "globals": "^16.3.0",
+    "mf-parser": "^3.6.0",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cheminfo/ocl-cache.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cheminfo/ocl-cache/issues"
+  },
+  "homepage": "https://github.com/cheminfo/ocl-cache#readme",
   "volta": {
     "node": "24.6.0"
   }

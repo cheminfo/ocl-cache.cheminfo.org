@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify/types/instance';
+import type { FastifyInstance } from 'fastify';
 
 import fromIDCode from './fromIDCode.ts';
 import fromMolfile from './fromMolfile.ts';

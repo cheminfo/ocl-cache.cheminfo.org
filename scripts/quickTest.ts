@@ -1,9 +1,10 @@
-import { Database, Statement } from 'better-sqlite3';
+import type { Statement } from 'better-sqlite3';
 import { Molecule } from 'openchemlib';
-import calculateMoleculeInfo from '../src/calculate/calculateMoleculeInfo';
 
-import { InternalMoleculeInfo } from '../src/InternalMoleculeInfo';
-import getDB from '../src/db/getDB';
+import type { MoleculeInfo } from '../src/MoleculeInfo.ts';
+import calculateMoleculeInfo from '../src/calculate/calculateMoleculeInfo.ts';
+import type { DB } from '../src/db/getDB.ts';
+import getDB from '../src/db/getDB.ts';
 
 let stmt: Statement;
 
@@ -13,51 +14,48 @@ let stmt: Statement;
  In a transaction we can add nearly 100 thousands entries per second !!!
 */
 
-function save(info: InternalMoleculeInfo, db: Database) {
+function save(info: MoleculeInfo, db: DB) {
   if (!stmt) {
-    stmt = db.prepare(
+    stmt = db.db.prepare(
       'INSERT INTO molecules VALUES (@idCode, @mf, @em, @mw, @charge, @noStereoID, @noStereoTautomerID, @logS, @logP, @acceptorCount, @donorCount, @rotatableBondCount, @stereoCenterCount, @polarSurfaceArea, @ssIndex , @nbFragments)',
     );
   }
   try {
-
-    const insertMany = db.transaction((entries) => {
+    const insertMany = db.db.transaction((entries) => {
       for (const entry of entries) {
-        stmt.run(entry)
+        stmt.run(entry);
       }
-      console.log(entries[123])
-      console.log(entries.length)
+      console.log(entries[123]);
+      console.log(entries.length);
     });
 
-    const entries = []
-    const idCode = info.idCode
-    const ssIndex = info.ssIndex
+    const entries = [];
+    const idCode = info.idCode;
+    const ssIndex = info.ssIndex;
     for (let i = 0; i < 1000000; i++) {
-      const copy = JSON.parse(JSON.stringify(info))
-      copy.idCode = idCode + '_' + i + '_' + Math.random()
-      copy.ssIndex = ssIndex
-      entries.push(copy)
+      const copy = structuredClone(info);
+      copy.idCode = `${idCode}_${i}_${Math.random()}`;
+      copy.ssIndex = ssIndex;
+      entries.push(copy);
     }
     insertMany(entries);
-
-  } catch (e) {
-    console.log(e);
-    console.log('Existing idCode: ', info.idCode)
+  } catch (error) {
+    console.log(error);
+    console.log('Existing idCode:', info.idCode);
   }
 }
 
 async function quickTest() {
-  const db = getDB();
-  const molecule = Molecule.fromSmiles('CCCC')
-  const info = calculateMoleculeInfo(molecule)
-  console.time('saveInDB')
-  const idCode = info.idCode
+  const db = await getDB();
+  const molecule = Molecule.fromSmiles('CCCC');
+  const info = calculateMoleculeInfo(molecule);
+  console.time('saveInDB');
+  const idCode = info.idCode;
   for (let i = 0; i < 1; i++) {
-    info.idCode = idCode + '_' + i + '_' + Math.random()
-    save(info, db)
+    info.idCode = `${idCode}_${i}_${Math.random()}`;
+    save(info, db);
   }
-  console.timeEnd('saveInDB')
-
+  console.timeEnd('saveInDB');
 }
 
-quickTest()
+await quickTest();

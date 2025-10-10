@@ -1,4 +1,6 @@
-import { join } from 'path';
+// @ts-nocheck
+
+import { join } from 'node:path';
 
 import sqLite from 'better-sqlite3';
 
@@ -35,6 +37,8 @@ export default async function fixNoStereoID() {
   await Promise.all(actions);
   return counter;
 }
+
+/** @returns {import('better-sqlite3').Database} */
 export function getDB() {
   let db;
   // get __dirname

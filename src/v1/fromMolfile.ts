@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify/types/instance';
+import type { FastifyInstance } from 'fastify';
 
 import getDB from '../db/getDB.ts';
 import { getInfoFromMolfile } from '../db/getInfoFromMolfile.ts';

@@ -1,19 +1,10 @@
 {
+  "extends": "@zakodium/tsconfig",
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "declaration": true,
-    "declarationMap": true,
-    "esModuleInterop": true,
-    "lib": ["ES2022"],
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "skipLibCheck": true,
-    "sourceMap": true,
-    "allowImportingTsExtensions": true,
     "noEmit": true,
-    "strict": true,
-    "target": "ESNext"
+    "noUncheckedIndexedAccess": false
   },
-  "include": ["./src/**/*"]
+  "include": ["src", "scripts"]
 }
