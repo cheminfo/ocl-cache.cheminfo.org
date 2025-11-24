@@ -2,39 +2,74 @@ name: Docker Image CI
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'GitHub ref to checkout'
+        required: true
+        default: main
+      tag:
+        description: 'Docker tag to push (do NOT use "latest" or version numbers)'
+        required: true
+        default: 'HEAD'
   push:
-    branches:
-      - main
     tags:
       - v*
 
-concurrency:
-  group: '${{ github.workflow }}-${{ github.ref }}'
-  cancel-in-progress: true
-
 env:
-  DOCKER_BUILDKIT: 1
-  IMAGE_NAME: ocl-cache
-  IMAGE_ID: ghcr.io/cheminfo/ocl-cache
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
-    name: Build and push Docker image
+    name: Build and push image to registry
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
         with:
-          node-version-file: 'package.json'
-          cache: npm
-          registry-url: https://npm.pkg.github.com
+          ref: ${{ github.event.inputs.ref }}
+
       - name: Build image
-        run: docker build . -f Dockerfile --build-arg NODE_VERSION=$(jq -r ".volta.node" package.json) --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+        run: docker build . --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+
       - name: Log in to registry
-        if: github.event_name != 'workflow_dispatch'
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Push image
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
+
+      - name: Push image (manual)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          IMAGE_ID="${REGISTRY}/${IMAGE_NAME}"
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          TAG=${{ github.event.inputs.tag }}
+
+          echo IMAGE_ID=$IMAGE_ID
+          echo TAG=$TAG
+
+          docker tag $IMAGE_NAME $IMAGE_ID:$TAG
+          docker push $IMAGE_ID:$TAG
+
+      - name: Push image (release)
         if: github.event_name != 'workflow_dispatch'
         run: |
-          docker tag $IMAGE_NAME $IMAGE_ID:${{ github.ref_name }}
-          docker push $IMAGE_ID:${{ github.ref_name }}
+          IMAGE_ID="${REGISTRY}/${IMAGE_NAME}"
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          VERSION_START=${VERSION%%.*}
+
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+
+          # Push latest
+          docker tag $IMAGE_NAME $IMAGE_ID:latest
+          docker push $IMAGE_ID:latest
+          # Push full version
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+          # Push short version
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION_START
+          docker push $IMAGE_ID:$VERSION_START
