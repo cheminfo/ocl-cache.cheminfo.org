@@ -1,7 +1,7 @@
 import { Molecule } from 'openchemlib';
 import pino from 'pino';
 
-import type { DB } from '../db/getDB.ts';
+import type { DB } from '../db/DB.ts';
 import { LineStream } from '../utils/LineStream.ts';
 
 import { appendStream } from './appendStream.ts';

@@ -1,25 +1,19 @@
-import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
 
-import getDB from '../db/getDB.ts';
+import { getDB } from '../db/dbFactory.ts';
 import { getInfoFromSmiles } from '../db/getInfoFromSmiles.ts';
+import type { FastifyTyped } from '../types.ts';
 
-export default function fromSmiles(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { smiles: string } }>(
-    '/v1/fromSmiles',
+export default function fromSmiles(fastify: FastifyTyped) {
+  fastify.get(
+    '/fromSmiles',
     {
       schema: {
+        tags: ['molecule'],
         summary: 'Retrieve information from a SMILES',
-        description: '',
-        querystring: {
-          type: 'object',
-          properties: {
-            smiles: {
-              type: 'string',
-              description: 'SMILES',
-            },
-          },
-          required: ['smiles'],
-        },
+        querystring: Type.Object({
+          smiles: Type.String({ description: 'SMILES' }),
+        }),
       },
     },
     async (request, response) => {

@@ -1,7 +1,7 @@
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
 import calculateMoleculeInfoFromIDCodePromise from '../calculate/calculateMoleculeInfoFromIDCodePromise.ts';
 
-import type { DB } from './getDB.ts';
+import type { DB } from './DB.ts';
 import { insertInfo } from './insertInfo.ts';
 
 export async function insertMolecule(

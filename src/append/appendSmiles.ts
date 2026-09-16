@@ -2,7 +2,7 @@ import { Molecule } from 'openchemlib';
 import pino from 'pino';
 
 import calculateMoleculeInfoFromIDCodePromise from '../calculate/calculateMoleculeInfoFromIDCodePromise.ts';
-import type { DB } from '../db/getDB.ts';
+import type { DB } from '../db/DB.ts';
 import idCodeIsPresent from '../db/idCodeIsPresent.ts';
 import { insertInfo } from '../db/insertInfo.ts';
 

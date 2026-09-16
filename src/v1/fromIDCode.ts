@@ -1,24 +1,18 @@
-import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
 
 import { getInfoFromIDCode } from '../db/getInfoFromIDCode.ts';
+import type { FastifyTyped } from '../types.ts';
 
-export default function fromIDCode(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { idCode: string } }>(
-    '/v1/fromIDCode',
+export default function fromIDCode(fastify: FastifyTyped) {
+  fastify.get(
+    '/fromIDCode',
     {
       schema: {
+        tags: ['molecule'],
         summary: 'Retrieve information from idCode',
-        description: '',
-        querystring: {
-          type: 'object',
-          properties: {
-            idCode: {
-              type: 'string',
-              description: 'idCode',
-            },
-          },
-          required: ['idCode'],
-        },
+        querystring: Type.Object({
+          idCode: Type.String({ description: 'idCode' }),
+        }),
       },
     },
     async (request, response) => {

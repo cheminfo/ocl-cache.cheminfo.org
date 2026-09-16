@@ -22,7 +22,7 @@ export default function calculateMoleculeInfo(
   const { ignoreTautomer = false } = options;
 
   // @ts-expect-error - parts is not defined in the type and it should be fixed in mf
-  const mf = getMF(molecule).parts.sort().join('.');
+  const mf = getMF(molecule).parts.toSorted().join('.');
   const mfInfo = new MF(mf).getInfo();
 
   const idCode = molecule.getIDCode();

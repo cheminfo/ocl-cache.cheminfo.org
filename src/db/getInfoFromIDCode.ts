@@ -2,8 +2,8 @@ import pino from 'pino';
 
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
 
+import { getDB } from './dbFactory.ts';
 import { dbInfoToMoleculeInfo } from './dbInfoToMoleculeInfo.ts';
-import getDB from './getDB.ts';
 import { insertMolecule } from './insertMolecule.ts';
 
 const logger = pino({ messageKey: 'getInfoFromIDCode' });

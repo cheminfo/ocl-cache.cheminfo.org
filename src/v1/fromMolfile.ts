@@ -1,25 +1,19 @@
-import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
 
-import getDB from '../db/getDB.ts';
+import { getDB } from '../db/dbFactory.ts';
 import { getInfoFromMolfile } from '../db/getInfoFromMolfile.ts';
+import type { FastifyTyped } from '../types.ts';
 
-export default function fromMolfile(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { molfile: string } }>(
-    '/v1/fromMolfile',
+export default function fromMolfile(fastify: FastifyTyped) {
+  fastify.get(
+    '/fromMolfile',
     {
       schema: {
+        tags: ['molecule'],
         summary: 'Retrieve information from a molfile',
-        description: '',
-        querystring: {
-          type: 'object',
-          properties: {
-            molfile: {
-              type: 'string',
-              description: 'Molfile',
-            },
-          },
-          required: ['molfile'],
-        },
+        querystring: Type.Object({
+          molfile: Type.String({ description: 'Molfile' }),
+        }),
       },
     },
     async (request, response) => {

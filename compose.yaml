@@ -1,0 +1,66 @@
+# Port-published deployment: PORT is exposed on the host loopback.
+# Selected by default when COMPOSE_FILE is unset in .env.
+
+services:
+  ocl-cache:
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    build: .
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 512
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-20822}
+      DATA_DIR: ${DATA_DIR:-/app/data}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    volumes:
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+    ports:
+      - 127.0.0.1:${PORT:-20822}:${PORT:-20822}
+
+  process-sdf:
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    build: .
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 4g
+    cpus: 4
+    pids_limit: 1024
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-20822}
+      DATA_DIR: ${DATA_DIR:-/app/data}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    volumes:
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+    command: ['npm', 'run', 'processSDF']

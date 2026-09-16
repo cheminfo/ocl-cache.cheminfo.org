@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { getTempDB } from '../../db/getDB.ts';
+import { getTempDB } from '../../db/dbFactory.ts';
 import { appendSmiles } from '../appendSmiles.ts';
 
 test('appendSmiles', { timeout: 30000 }, async () => {

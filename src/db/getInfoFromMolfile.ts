@@ -2,7 +2,7 @@ import { Molecule } from 'openchemlib';
 
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
 
-import type { DB } from './getDB.ts';
+import type { DB } from './DB.ts';
 import { getInfoFromMolecule } from './getInfoFromMolecule.ts';
 
 /**

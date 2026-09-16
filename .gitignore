@@ -120,7 +120,8 @@ dist
 lib
 lib-esm
 
-sqlite
 
 Compound*
-compose.yml
+.claude
+.deploy
+data/sqlite

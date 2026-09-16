@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { getTempDB } from '../getDB.ts';
+import { getTempDB } from '../dbFactory.ts';
 import { getInfoFromSmiles } from '../getInfoFromSmiles.ts';
 
 test(

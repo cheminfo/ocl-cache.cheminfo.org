@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { expect, test } from 'vitest';
 
-import { getTempDB } from '../../db/getDB.ts';
+import { getTempDB } from '../../db/dbFactory.ts';
 import { appendIDCodeStream } from '../appendIDCodeStream.ts';
 
 test('appendIDCodeStream', { timeout: 30000 }, async () => {
@@ -41,13 +41,5 @@ test('appendIDCodeStream', { timeout: 30000 }, async () => {
     polarSurfaceArea: 0,
     nbFragments: 1,
     unsaturation: 0,
-    ssIndex0: 1082130432,
-    ssIndex1: 0,
-    ssIndex2: 0,
-    ssIndex3: 0,
-    ssIndex4: 0,
-    ssIndex5: 0,
-    ssIndex6: 0,
-    ssIndex7: 0,
   });
 });

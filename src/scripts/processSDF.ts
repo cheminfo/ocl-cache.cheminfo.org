@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { FileCollection } from 'file-collection';
 import pino from 'pino';
 
-import getDB from '../db/getDB.ts';
+import { getDB } from '../db/dbFactory.ts';
 import { appendSDFStream } from '../index.ts';
 
 const parentDir = join(import.meta.dirname, '../../data/sdf');

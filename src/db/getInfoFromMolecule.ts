@@ -3,8 +3,8 @@ import pino from 'pino';
 
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
 
+import type { DB } from './DB.ts';
 import { dbInfoToMoleculeInfo } from './dbInfoToMoleculeInfo.ts';
-import type { DB } from './getDB.ts';
 import { insertMolecule } from './insertMolecule.ts';
 
 const logger = pino({ messageKey: 'getInfoFromMolecule' });

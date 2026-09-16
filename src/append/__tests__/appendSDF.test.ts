@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { expect, test } from 'vitest';
 
-import { getTempDB } from '../../db/getDB.ts';
+import { getTempDB } from '../../db/dbFactory.ts';
 import { appendSDF } from '../appendSDF.ts';
 
 test('appendSDF', { timeout: 30000 }, async () => {

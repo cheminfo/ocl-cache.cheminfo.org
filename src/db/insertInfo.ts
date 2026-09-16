@@ -1,21 +1,15 @@
 import { serialize } from 'bson';
 import pino from 'pino';
 
-import type { DBMoleculeInfo, MoleculeInfo } from '../MoleculeInfo.ts';
+import type {
+  DBMoleculeInfo,
+  MoleculeInfo,
+  SSIndexColumns,
+} from '../MoleculeInfo.ts';
 
-import type { DB } from './getDB.ts';
+import type { DB } from './DB.ts';
 
 const logger = pino({ messageKey: 'insertInfo' });
-interface SSIndexes {
-  ssIndex0: bigint;
-  ssIndex1: bigint;
-  ssIndex2: bigint;
-  ssIndex3: bigint;
-  ssIndex4: bigint;
-  ssIndex5: bigint;
-  ssIndex6: bigint;
-  ssIndex7: bigint;
-}
 
 export function insertInfo(info: MoleculeInfo, db: DB) {
   // 2 issues when we want to store the info in the database
@@ -24,22 +18,18 @@ export function insertInfo(info: MoleculeInfo, db: DB) {
 
   // in the DB we prefer to store int64 in order to make substructure preindex search in the future
   const ssIndex = Int32Array.from(info.ssIndex);
-
   const ssIndex64 = new BigInt64Array(ssIndex.buffer);
-  const ssIndexes: SSIndexes = {
-    ssIndex0: ssIndex64[0],
-    ssIndex1: ssIndex64[1],
-    ssIndex2: ssIndex64[2],
-    ssIndex3: ssIndex64[3],
-    ssIndex4: ssIndex64[4],
-    ssIndex5: ssIndex64[5],
-    ssIndex6: ssIndex64[6],
-    ssIndex7: ssIndex64[7],
-  };
+
+  const ssIndexes = {} as SSIndexColumns;
+  for (let i = 0; i < 8; i++) {
+    ssIndexes[`ssIndex${i}` as keyof SSIndexColumns] = ssIndex64[i] ?? 0n;
+  }
 
   const stmtData: DBMoleculeInfo = {
     ...info,
-    ssIndex: new Uint8Array(Int32Array.from(info.ssIndex).buffer),
+    // node:sqlite refuses to bind undefined
+    unsaturation: info.unsaturation ?? null,
+    ssIndex: new Uint8Array(ssIndex.buffer),
     atoms: serialize(info.atoms),
     ...ssIndexes,
   };

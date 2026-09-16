@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+.deploy
+node_modules
+coverage
+compose*.yaml
+.env
+.env.*
+data
+sqlite
+scripts
+README.md
+CHANGELOG.md

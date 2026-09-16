@@ -6,7 +6,7 @@ import { FileCollection } from 'file-collection';
 import pino from 'pino';
 
 import { appendSmilesStream } from '../append/appendSmilesStream.ts';
-import getDB from '../db/getDB.ts';
+import { getDB } from '../db/dbFactory.ts';
 
 const logger = pino({ messageKey: 'processSmiles' });
 

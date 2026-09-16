@@ -1,9 +1,8 @@
 import { Molecule } from 'openchemlib';
 import pino from 'pino';
-//@ts-expect-error sdf-parser is not typed
 import { MolfileStream } from 'sdf-parser';
 
-import type { DB } from '../db/getDB.ts';
+import type { DB } from '../db/DB.ts';
 
 import { appendStream } from './appendStream.ts';
 

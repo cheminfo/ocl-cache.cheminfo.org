@@ -1,0 +1,95 @@
+# Cloudflare Tunnel deployment - no port published on the host.
+#
+# Cloudflare dashboard (https://dash.cloudflare.com):
+#   Networking -> Tunnels -> Create a tunnel -> Cloudflared connector ->
+#   copy the token into .env as TUNNEL_TOKEN=... -> open the tunnel ->
+#   Published applications tab -> add application with
+#   Service = HTTP, URL = ocl-cache:20822, hostname ocl-cache.lactame.com.
+#
+# Select via COMPOSE_FILE=compose.cloudflared.yaml in .env, then: docker compose up -d
+
+services:
+  ocl-cache:
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    build: .
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 512
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-20822}
+      DATA_DIR: ${DATA_DIR:-/app/data}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    volumes:
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+
+  process-sdf:
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    build: .
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 4g
+    cpus: 4
+    pids_limit: 1024
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-20822}
+      DATA_DIR: ${DATA_DIR:-/app/data}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    volumes:
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+    command: ['npm', 'run', 'processSDF']
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 64
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    depends_on:
+      - ocl-cache

@@ -3,7 +3,7 @@ import pino from 'pino';
 
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
 
-import type { DB } from './getDB.ts';
+import type { DB } from './DB.ts';
 import { getInfoFromMolecule } from './getInfoFromMolecule.ts';
 
 const logger = pino({ messageKey: 'getInfoFromSmiles' });

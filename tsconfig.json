@@ -4,7 +4,8 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": true,
+    "types": ["node"]
   },
-  "include": ["src", "scripts"]
+  "include": ["src", "scripts", "vite*.ts"]
 }

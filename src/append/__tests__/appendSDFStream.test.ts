@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { expect, test } from 'vitest';
 
-import { getTempDB } from '../../db/getDB.ts';
+import { getTempDB } from '../../db/dbFactory.ts';
 import { appendSDFStream } from '../appendSDFStream.ts';
 
 test('appendSDFStream', { timeout: 30000 }, async () => {
@@ -57,13 +57,5 @@ test('appendSDFStream compressed file', async () => {
     polarSurfaceArea: 59.029998779296875,
     nbFragments: 1,
     unsaturation: 0,
-    ssIndex0: 4621258370893481000,
-    ssIndex1: 4398055948288,
-    ssIndex2: 0,
-    ssIndex3: 2251799813685248,
-    ssIndex4: 0,
-    ssIndex5: 0,
-    ssIndex6: 0,
-    ssIndex7: 71485435674624,
   });
 });
