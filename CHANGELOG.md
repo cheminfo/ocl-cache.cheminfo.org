@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.0.0](https://github.com/cheminfo/ocl-cache.cheminfo.org/compare/v1.1.1...v2.0.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* serve a React frontend, and record when a molecule was cached
+* the database moved from ./sqlite to ./data/sqlite. Run `mkdir -p data/sqlite && mv sqlite/db.sqlite* data/sqlite/` before starting.
+
+### Features
+
+* migrate to node:sqlite and current standards ([7db4ae9](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/7db4ae9801488ea93909f30ebde86f6faed7572b))
+* serve a React frontend, and record when a molecule was cached ([d21fd35](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/d21fd35f47f9302a8d61a383a344c213e9a115e1))
+
+
+### Bug Fixes
+
+* publish and pull ghcr.io/cheminfo/ocl-cache.cheminfo.org ([5487021](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/5487021d1004b6d47aa5368be8bfc943a0e1b97f))
+* read the import queues from DATA_DIR ([c4824a6](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/c4824a6d5f37ed829448582023968ce7fc86e5bb))
+* size the worker pool by the container's CPU quota, not the host's cores ([dc51959](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/dc519591bd1808a339529e4f1f06563ddfc5d089))
+
+
+### Performance Improvements
+
+* **stats:** refresh from the new molecules only, and spill the sort to disk ([d6dafcf](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/d6dafcfc8d408cf8e48e5c3710bbb0ed777fc521))
+
 ## [1.1.1](https://github.com/cheminfo/ocl-cache/compare/v1.1.0...v1.1.1) (2025-04-02)
 
 
