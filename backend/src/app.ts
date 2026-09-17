@@ -153,8 +153,10 @@ function registerFrontend(
     ),
   );
 
+  // Blank, not absent: the compose files pass `SITE_URL: ${SITE_URL:-}`, so a
+  // deployment that names no address hands this an empty string.
   const originOf = (request: FastifyRequest) =>
-    options.siteUrl ?? `${request.protocol}://${request.host}`;
+    options.siteUrl?.trim() || `${request.protocol}://${request.host}`;
 
   const sendIndex = (request: FastifyRequest, reply: FastifyReply) =>
     reply

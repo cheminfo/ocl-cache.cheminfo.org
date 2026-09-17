@@ -1,17 +1,17 @@
 import { EventEmitter } from 'node:events';
-import { cpus } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { Piscina } from 'piscina';
 
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
+import { workerThreadCount } from '../utils/workerThreadCount.ts';
 
 import calculateMoleculeInfoFromIDCode from './calculateMoleculeInfoFromIDCode.ts';
 
 EventEmitter.defaultMaxListeners = 512; // default is 10 and we can have more processes
 
-const nbCPU = cpus().length;
+const nbCPU = workerThreadCount();
 
 const piscina = new Piscina({
   filename: join(import.meta.dirname, 'calculateMoleculeInfoFromIDCode.ts'),

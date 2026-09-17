@@ -82,6 +82,37 @@ test('the root serves the page, titled as the search', async () => {
   );
 });
 
+test('a blank SITE_URL falls back to the requested host', async () => {
+  // `SITE_URL: ${SITE_URL:-}` in the compose files hands a deployment that
+  // names no address an empty string, which is not absent: read as an origin
+  // it threw, and every page answered 500.
+  const instance = await buildApp({
+    trustProxy: '192.168.1.5',
+    logger: false,
+    frontendRoot: FIXTURE_ROOT,
+    siteUrl: '',
+  });
+
+  try {
+    const response = await instance.inject({
+      method: 'GET',
+      url: '/',
+      remoteAddress: '192.168.1.5',
+      headers: {
+        host: 'ocl-cache.cheminfo.org',
+        'x-forwarded-proto': 'https',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      '<link rel="canonical" href="https://ocl-cache.cheminfo.org/"',
+    );
+  } finally {
+    await instance.close();
+  }
+});
+
 test('the former documentation address still redirects', async () => {
   const response = await app.inject({ method: 'GET', url: '/documentation' });
 

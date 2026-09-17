@@ -104,17 +104,18 @@ up, appends every new molecule to the cache, and moves the file to `processed`.
 
 ## Environment
 
-| Variable          | Default                                   | Meaning                                                                                                                                    |
-| ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`            | `20822`                                   | port the API listens on; the Vite dev server sits one above it                                                                             |
-| `DATA_DIR`        | `<repo>/data`                             | holds `sqlite/` and the import queues                                                                                                      |
-| `TRACKING_SCRIPT` | unset                                     | audience-measurement snippet, injected verbatim at the end of the served page's `<head>`; unset loads nothing, so a dev run tracks nothing |
-| `SITE_URL`        | unset                                     | where the site is served from, written into every canonical link and sitemap entry; unset uses the request's host                          |
-| `STATS_INTERVAL`  | `21600000`                                | milliseconds between two statistics passes                                                                                                 |
-| `TRUST_PROXY`     | unset (`false`)                           | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count                                    |
-| `IMAGE_NAME`      | `ghcr.io/cheminfo/ocl-cache.cheminfo.org` | image the compose files run                                                                                                                |
-| `IMAGE_TAG`       | `latest`                                  | rewritten by the server's deploy script — never edit by hand                                                                               |
-| `TUNNEL_TOKEN`    | —                                         | Cloudflare Tunnel token, cloudflared mode only                                                                                             |
+| Variable          | Default                                   | Meaning                                                                                                                                                  |
+| ----------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`            | `20822`                                   | port the API listens on; the Vite dev server sits one above it                                                                                           |
+| `DATA_DIR`        | `<repo>/data`                             | holds `sqlite/` and the import queues                                                                                                                    |
+| `TRACKING_SCRIPT` | unset                                     | audience-measurement snippet, injected verbatim at the end of the served page's `<head>`; unset loads nothing, so a dev run tracks nothing               |
+| `SITE_URL`        | unset                                     | where the site is served from, written into every canonical link and sitemap entry; unset uses the request's host                                        |
+| `STATS_INTERVAL`  | `21600000`                                | milliseconds between two statistics passes                                                                                                               |
+| `TRUST_PROXY`     | unset (`false`)                           | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count                                                  |
+| `WORKER_THREADS`  | the container's CPU allowance             | openchemlib worker threads per service; a cgroup hides the real quota from `/proc/cpuinfo`, so an unbounded pool is killed for reaching the memory limit |
+| `IMAGE_NAME`      | `ghcr.io/cheminfo/ocl-cache.cheminfo.org` | image the compose files run                                                                                                                              |
+| `IMAGE_TAG`       | `latest`                                  | rewritten by the server's deploy script — never edit by hand                                                                                             |
+| `TUNNEL_TOKEN`    | —                                         | Cloudflare Tunnel token, cloudflared mode only                                                                                                           |
 
 ## Deployment
 
