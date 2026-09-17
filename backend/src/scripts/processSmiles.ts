@@ -6,11 +6,11 @@ import { FileCollection } from 'file-collection';
 import pino from 'pino';
 
 import { appendSmilesStream } from '../append/appendSmilesStream.ts';
-import { getDB } from '../db/dbFactory.ts';
+import { getDB, getDataDir } from '../db/dbFactory.ts';
 
 const logger = pino({ messageKey: 'processSmiles' });
 
-const parentDir = join(import.meta.dirname, '../../data/smiles');
+const parentDir = join(getDataDir(), 'smiles');
 const baseDir = join(parentDir, 'to_process');
 
 logger.info(`Checking for SMILES files in: ${baseDir}`);

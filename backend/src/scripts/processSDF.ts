@@ -5,10 +5,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { FileCollection } from 'file-collection';
 import pino from 'pino';
 
-import { getDB } from '../db/dbFactory.ts';
+import { getDB, getDataDir } from '../db/dbFactory.ts';
 import { appendSDFStream } from '../index.ts';
 
-const parentDir = join(import.meta.dirname, '../../data/sdf');
+const parentDir = join(getDataDir(), 'sdf');
 const sdfDir = join(parentDir, 'to_process');
 const logger = pino({ messageKey: 'processSDF' });
 
