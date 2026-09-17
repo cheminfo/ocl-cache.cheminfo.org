@@ -3,7 +3,7 @@
 
 services:
   ocl-cache:
-    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache.cheminfo.org}:${IMAGE_TAG:-latest}
     build: .
     init: true
     read_only: true
@@ -51,7 +51,7 @@ services:
       - 127.0.0.1:${PORT:-20822}:${PORT:-20822}
 
   process-sdf:
-    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache.cheminfo.org}:${IMAGE_TAG:-latest}
     build: .
     init: true
     read_only: true
@@ -94,7 +94,7 @@ services:
   # The statistics pass: a full scan of `molecules`, which has no business in
   # the server's process. It writes the rollup the /v1/stats route reads.
   refresh-stats:
-    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache.cheminfo.org}:${IMAGE_TAG:-latest}
     build: .
     init: true
     read_only: true
