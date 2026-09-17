@@ -1,27 +1,82 @@
 # ocl-cache
 
-Cache derived molecule properties — idCode, noStereoID, tautomer ids, logP, logS,
-surface area, substructure index — in a SQLite database, so they are computed
-once and read back thereafter.
+Properties derived from a structure — idCode, noStereoID, tautomer ids, logP,
+logS, surface area, substructure index — computed once with OpenChemLib and
+cached in SQLite, so they are read back thereafter.
 
 Running at [ocl-cache.cheminfo.org](https://ocl-cache.cheminfo.org).
 
+## The pages
+
+| Address       | What it is                                                       |
+| ------------- | ---------------------------------------------------------------- |
+| `/`           | the tool: look a molecule up, or search the cache for a fragment |
+| `/statistics` | what the whole database holds, and when it arrived               |
+| `/about`      | what it is built on, how to cite it, and its licence             |
+| `/docs`       | the API, documented interactively                                |
+
 ## API
 
-Every route lives under `/v1`. Interactive documentation is at `/docs`.
+Every route lives under `/v1`.
 
-| Route                 | Query     | Returns                                |
-| --------------------- | --------- | -------------------------------------- |
-| `GET /v1/fromSmiles`  | `smiles`  | molecule information for a SMILES      |
-| `GET /v1/fromMolfile` | `molfile` | molecule information for a molfile     |
-| `GET /v1/fromIDCode`  | `idCode`  | molecule information for an OCL idCode |
-| `GET /health`         | —         | `{"status":"ok"}`                      |
+| Route                 | Query                      | Returns                                     |
+| --------------------- | -------------------------- | ------------------------------------------- |
+| `GET /v1/lookup`      | `q`, `kind?`, `cacheOnly?` | one molecule, in any of the three notations |
+| `GET /v1/stats`       | —                          | the figures the statistics page draws       |
+| `GET /v1/fromSmiles`  | `smiles`                   | molecule information for a SMILES           |
+| `GET /v1/fromMolfile` | `molfile`                  | molecule information for a molfile          |
+| `GET /v1/fromIDCode`  | `idCode`                   | molecule information for an OCL idCode      |
+| `GET /health`         | —                          | `{"status":"ok"}`                           |
 
 ```sh
-curl 'https://ocl-cache.cheminfo.org/v1/fromSmiles?smiles=CCOCC'
+curl 'https://ocl-cache.cheminfo.org/v1/lookup?q=CCOCC'
 ```
 
-A molecule that is not yet cached is computed on the spot, stored, and returned.
+`q` is read as a molfile when it carries a counts line, as an idCode when it
+writes itself back unchanged, and as a SMILES otherwise; `kind` says so
+explicitly. A molecule that is not cached is computed on the spot, stored and
+returned — unless `cacheOnly` is set, which makes a miss return nothing.
+
+The cache answers for one molecule at a time. It deliberately offers no query
+that walks the whole table: the `ssIndex` columns are kept for a future
+substructure screen, and nothing exposes them over HTTP.
+
+### Sharing and embedding
+
+| Parameter | Meaning                                                                                 |
+| --------- | --------------------------------------------------------------------------------------- |
+| `embed`   | drop the site chrome, so the page can be framed in another site                         |
+| `hide`    | comma-separated features to switch off: `pages`, `structure`, `identifiers`, `examples` |
+
+```html
+<iframe
+  src="https://ocl-cache.cheminfo.org/?embed=1&hide=pages,identifiers"
+  width="100%"
+  height="700"
+  style="border: 1px solid #ddd; border-radius: 8px"
+  title="ocl-cache — molecule lookup"
+></iframe>
+```
+
+An unknown `hide` key is ignored, so a link written before a feature was
+renamed still opens.
+
+## Statistics
+
+Every figure but the molecule count comes from a full pass over `molecules`,
+run by the `refresh-stats` service rather than inside a request: two
+`COUNT(DISTINCT)` queries alone take seconds on a large cache. The pass writes
+one JSON rollup, and `/v1/stats` reads it, so the page costs one row read
+however far the cache has grown. `computedAt` says how old the figures are.
+
+The molecule count is live and free: no row is ever deleted, so the rowids run
+`1..n` and the last one is the count — which SQLite answers by seeking one end
+of the b-tree.
+
+**Molecules cached before release 1.2 carry no date**, because the column did
+not exist. They are counted apart on the statistics page rather than folded
+into a month they may not belong to; everything cached since carries the day it
+arrived.
 
 ## Bulk import
 
@@ -31,14 +86,17 @@ up, appends every new molecule to the cache, and moves the file to `processed`.
 
 ## Environment
 
-| Variable       | Default                      | Meaning                                                                                                 |
-| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `PORT`         | `20822`                      | port the API listens on                                                                                 |
-| `DATA_DIR`     | `<repo>/data`                | holds `sqlite/` and the import queues                                                                   |
-| `TRUST_PROXY`  | unset (`false`)              | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count |
-| `IMAGE_NAME`   | `ghcr.io/cheminfo/ocl-cache` | image the compose files run                                                                             |
-| `IMAGE_TAG`    | `latest`                     | rewritten by the server's deploy script — never edit by hand                                            |
-| `TUNNEL_TOKEN` | —                            | Cloudflare Tunnel token, cloudflared mode only                                                          |
+| Variable          | Default                      | Meaning                                                                                                                                    |
+| ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`            | `20822`                      | port the API listens on; the Vite dev server sits one above it                                                                             |
+| `DATA_DIR`        | `<repo>/data`                | holds `sqlite/` and the import queues                                                                                                      |
+| `TRACKING_SCRIPT` | unset                        | audience-measurement snippet, injected verbatim at the end of the served page's `<head>`; unset loads nothing, so a dev run tracks nothing |
+| `SITE_URL`        | unset                        | where the site is served from, written into every canonical link and sitemap entry; unset uses the request's host                          |
+| `STATS_INTERVAL`  | `21600000`                   | milliseconds between two statistics passes                                                                                                 |
+| `TRUST_PROXY`     | unset (`false`)              | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count                                    |
+| `IMAGE_NAME`      | `ghcr.io/cheminfo/ocl-cache` | image the compose files run                                                                                                                |
+| `IMAGE_TAG`       | `latest`                     | rewritten by the server's deploy script — never edit by hand                                                                               |
+| `TUNNEL_TOKEN`    | —                            | Cloudflare Tunnel token, cloudflared mode only                                                                                             |
 
 ## Deployment
 
@@ -64,7 +122,9 @@ Three modes, selected by `COMPOSE_FILE` in `.env`:
   `TUNNEL_TOKEN` → open the tunnel → Published applications → add an application
   with Service `HTTP`, URL `ocl-cache:20822`, hostname `ocl-cache.lactame.com`.
 
-The database and the import queues are bind-mounted from `./data`.
+Each mode runs three services off the one image: the server, `process-sdf` for
+the import queues, and `refresh-stats` for the figures. The database and the
+queues are bind-mounted from `./data`.
 
 > **Upgrading from 1.1.x** — the database moved from `./sqlite/db.sqlite` to
 > `./data/sqlite/db.sqlite`. Run `mkdir -p data/sqlite && mv sqlite/db.sqlite*
@@ -77,15 +137,18 @@ npm install
 npm run dev
 ```
 
-The server reads `PORT` from the environment and defaults to `20822`, so
-`http://localhost:20822/docs` serves the documentation.
+The backend listens on `PORT` (20822 by default) and the Vite dev server on
+`PORT + 1`, proxying `/v1` to the backend — so the tool is at
+`http://localhost:20823` and the documentation at
+`http://localhost:20822/docs`.
 
 Requires Node.js ≥ 22.13, which is the first release exposing `node:sqlite`
 unflagged — there is no native module to compile.
 
 ```sh
-npm run test        # tests, type-check, eslint, prettier
-npm run test-only   # tests with coverage
+npm run test        # tests, types, tokens, deploy contract, lint, format, e2e
+npm run test-only   # unit tests with coverage, both workspaces
+npm run test-e2e    # the Playwright suite, against the built page
 ```
 
 ## License

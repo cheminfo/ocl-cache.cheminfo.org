@@ -125,3 +125,9 @@ Compound*
 .claude
 .deploy
 data/sqlite
+
+e2e-data
+
+# Playwright output
+test-results
+playwright-report

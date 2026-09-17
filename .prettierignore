@@ -1,2 +1,8 @@
 CHANGELOG.md
 coverage
+**/coverage
+**/dist
+**/playwright-report
+**/test-results
+e2e-data
+node_modules

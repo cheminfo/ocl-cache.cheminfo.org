@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- The same geometry as the site's mark in react-cheminfo, with the two
+       colours written out: a file served on its own cannot read the page's
+       custom properties. Change one and change the other. -->
+  <rect width="32" height="32" rx="7" fill="#334155" />
+  <polygon points="16,3.2 21.54,6.4 21.54,12.8 16,16 10.46,12.8 10.46,6.4" fill="#f59e0b" />
+  <rect x="6.4" y="19.2" width="19.2" height="3.4" rx="1.7" fill="#ffffff" />
+  <rect x="6.4" y="24.4" width="19.2" height="3.4" rx="1.7" fill="#ffffff" opacity="0.55" />
+</svg>

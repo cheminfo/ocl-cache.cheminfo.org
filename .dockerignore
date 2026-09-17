@@ -1,14 +1,23 @@
 .git
+# The commit the About reports comes off these three; a few kilobytes, and
+# without them the build info simply leaves the commit out.
+!.git/HEAD
+!.git/refs
+!.git/packed-refs
 .github
 .claude
 .deploy
 node_modules
+**/node_modules
 coverage
+**/coverage
+frontend/dist
+frontend/playwright-report
+frontend/test-results
 compose*.yaml
 .env
 .env.*
 data
 sqlite
-scripts
 README.md
 CHANGELOG.md
