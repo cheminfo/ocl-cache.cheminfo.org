@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import pino from 'pino';
 import Postgrator from 'postgrator';
@@ -11,6 +12,18 @@ const logger = pino({ messageKey: 'dbFactory' });
 
 const WAL_CHECKPOINT_THRESHOLD = 100_000_000;
 const WAL_CHECK_INTERVAL = 300_000;
+
+// Three containers share the file and migrate at startup, so a process may
+// have to wait for a whole migration: building an index over two million rows
+// is minutes, and the usual 30 s would turn that wait into a crash loop.
+const MIGRATION_BUSY_TIMEOUT = 600_000;
+const BUSY_TIMEOUT = 30_000;
+
+const WAL_RETRY_DELAY = 200;
+const WAL_RETRY_ATTEMPTS = 50;
+
+/** SQLITE_BUSY. */
+const SQLITE_BUSY = 5;
 
 let instance: Promise<DB> | undefined;
 
@@ -31,8 +44,10 @@ async function openDB(): Promise<DB> {
   migrateLegacyLocation(file);
 
   const db = new DatabaseSync(file);
-  _applyPragmas(db);
+  await applyPragmas(db);
+  db.exec(`PRAGMA busy_timeout = ${MIGRATION_BUSY_TIMEOUT}`);
   await prepareDB(db);
+  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT}`);
 
   watchWalSize(db, file);
   return new DB(db, join(dirname(file), 'slow-queries.log'));
@@ -57,13 +72,19 @@ export const _setInstance = (db: DB | undefined): void => {
 };
 
 /**
+ * Where the database and the import queues live.
+ * @returns the data directory
+ */
+export function getDataDir(): string {
+  return process.env.DATA_DIR ?? join(import.meta.dirname, '../../../data');
+}
+
+/**
  * The path of the on-disk database file.
  * @returns the absolute path
  */
 export function getDatabasePath(): string {
-  const dataDir =
-    process.env.DATA_DIR ?? join(import.meta.dirname, '../../../data');
-  return join(dataDir, 'sqlite', 'db.sqlite');
+  return join(getDataDir(), 'sqlite', 'db.sqlite');
 }
 
 /**
@@ -80,7 +101,46 @@ export async function prepareDB(db: DatabaseSync): Promise<void> {
       return Promise.resolve();
     },
   });
-  await postgrator.migrate();
+  // The schema moves under the write lock, because the server, the SDF
+  // importer and the statistics pass all open this file and migrate at once:
+  // a process that loses the race then reads the winner's version and has
+  // nothing left to do. The transaction also makes one migration script
+  // all-or-nothing, which `db.exec` on its own is not — a script whose second
+  // statement fails would otherwise leave the first applied and the version
+  // unrecorded, and every later start would replay it.
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    await postgrator.migrate();
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+/**
+ * Apply the pragmas, waiting out the exclusive lock the first connection takes
+ * to convert the file to WAL. That conversion answers SQLITE_BUSY at once
+ * instead of waiting on `busy_timeout`, so on a first start the containers
+ * that lose the race must retry rather than die.
+ * @param db - the connection to configure
+ */
+async function applyPragmas(db: DatabaseSync): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      _applyPragmas(db);
+      return;
+    } catch (error) {
+      if (
+        (error as { errcode?: number }).errcode !== SQLITE_BUSY ||
+        attempt === WAL_RETRY_ATTEMPTS
+      ) {
+        throw error;
+      }
+
+      await delay(WAL_RETRY_DELAY);
+    }
+  }
 }
 
 /**
@@ -89,7 +149,7 @@ export async function prepareDB(db: DatabaseSync): Promise<void> {
  * @param db - the connection to configure
  */
 const _applyPragmas = (db: DatabaseSync): void => {
-  db.exec('PRAGMA busy_timeout = 30000');
+  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT}`);
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA synchronous = OFF');
   // node:sqlite defaults to a 2 MB page cache, far too small for this workload.

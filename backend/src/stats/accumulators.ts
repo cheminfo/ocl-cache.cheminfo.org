@@ -2,7 +2,7 @@ import type { StatsScanRow } from '../db/rows.ts';
 
 import { elementsOf } from './elementsOf.ts';
 import { Histogram, ValueCounter } from './histogram.ts';
-import type { CacheStats, ElementCount } from './types.ts';
+import type { AdditiveStats, ElementCount, MonthCount } from './types.ts';
 
 /** Lipinski's thresholds, and the number of breaches the rule tolerates. */
 const LIPINSKI = { mw: 500, logP: 5, donors: 5, acceptors: 10, allowed: 1 };
@@ -26,6 +26,9 @@ export class Accumulators {
   readonly #unsaturation = new ValueCounter(0, 30);
 
   readonly #elements = new Map<string, number>();
+  // Counted here rather than by a SQL GROUP BY, so the months add up between
+  // passes like everything else and no query walks the table for them.
+  readonly #months = new Map<string, number>();
 
   #total = 0;
   #dated = 0;
@@ -43,7 +46,11 @@ export class Accumulators {
    */
   add(row: StatsScanRow): void {
     this.#total++;
-    if (row.createdAt !== null) this.#dated++;
+    if (row.createdAt !== null) {
+      this.#dated++;
+      const month = monthOf(row.createdAt);
+      this.#months.set(month, (this.#months.get(month) ?? 0) + 1);
+    }
     if (row.failedTautomerID) this.#failedTautomer++;
 
     if (row.mw !== null) {
@@ -84,13 +91,7 @@ export class Accumulators {
    * The figures this pass can answer on its own.
    * @returns every field but the ones SQLite computes
    */
-  toStats(): Omit<
-    CacheStats,
-    | 'distinctNoStereoID'
-    | 'distinctNoStereoTautomerID'
-    | 'perMonth'
-    | 'topFormulas'
-  > {
+  toStats(): AdditiveStats {
     return {
       total: this.#total,
       dated: this.#dated,
@@ -112,11 +113,13 @@ export class Accumulators {
         unsaturation: this.#unsaturation.toValueCounts(),
       },
       elements: this.#elementCounts(),
+      perMonth: this.#monthCounts(),
       mass: {
         min: this.#massMin,
         max: this.#massMax,
         mean:
           this.#massCounted === 0 ? null : this.#massSum / this.#massCounted,
+        sum: this.#massSum,
         counted: this.#massCounted,
       },
       lipinski: {
@@ -146,6 +149,13 @@ export class Accumulators {
     if (breaches <= LIPINSKI.allowed) this.#lipinskiPass++;
   }
 
+  #monthCounts(): MonthCount[] {
+    const months: MonthCount[] = [];
+    for (const [month, count] of this.#months) months.push({ month, count });
+    months.sort((one, other) => one.month.localeCompare(other.month));
+    return months;
+  }
+
   #elementCounts(): ElementCount[] {
     const counts: ElementCount[] = [];
     for (const [symbol, molecules] of this.#elements) {
@@ -154,4 +164,13 @@ export class Accumulators {
     counts.sort((one, other) => other.molecules - one.molecules);
     return counts;
   }
+}
+
+/**
+ * The month a moment falls in.
+ * @param unixSeconds - when the molecule was cached
+ * @returns the month, as `YYYY-MM`
+ */
+function monthOf(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toISOString().slice(0, 7);
 }

@@ -48,6 +48,11 @@ export interface RangeSummary {
   max: number | null;
   /** The mean of the values seen, or null when nothing was measured. */
   mean: number | null;
+  /**
+   * The total of the values seen. Kept so two passes can be added without
+   * reconstructing it from the mean, which would drift.
+   */
+  sum: number;
   /** How many molecules carried the property at all. */
   counted: number;
 }
@@ -121,6 +126,38 @@ export interface CacheStats {
   };
 }
 
+/**
+ * Everything one pass over a range of rows can add up on its own.
+ *
+ * All of it is additive: two passes over two ranges add to the pass over both,
+ * which is what lets a refresh read only the molecules that arrived since the
+ * last one. The three figures left out cannot be added — a distinct count and
+ * a ranking have to see every row — so they are refreshed on their own, slower
+ * cadence.
+ */
+export type AdditiveStats = Omit<
+  CacheStats,
+  'distinctNoStereoID' | 'distinctNoStereoTautomerID' | 'topFormulas'
+>;
+
+/**
+ * The rollup as it is stored, with what a later pass needs to continue from.
+ */
+export interface StoredRollup {
+  /** The figures themselves. */
+  stats: CacheStats;
+  /**
+   * The highest rowid the figures include. The next pass starts above it, so
+   * it reads only what has arrived since.
+   */
+  scannedUpTo: number;
+  /**
+   * When the three non-additive figures were last computed, in unix seconds.
+   * They are carried forward between full passes.
+   */
+  fullComputedAt: number;
+}
+
 /** A rollup with the moment it was computed. */
 export interface StatsSnapshot {
   /** When the pass ran, in unix seconds. */
@@ -129,6 +166,8 @@ export interface StatsSnapshot {
   durationMs: number;
   /** How many molecules it read. */
   scanned: number;
+  /** Whether the pass read the whole cache or only what was new. */
+  full: boolean;
   /** The figures themselves. */
   stats: CacheStats;
 }

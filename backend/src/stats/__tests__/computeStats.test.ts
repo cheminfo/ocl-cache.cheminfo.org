@@ -4,8 +4,9 @@ import { expect, test } from 'vitest';
 import calculateMoleculeInfo from '../../calculate/calculateMoleculeInfo.ts';
 import { getTempDB } from '../../db/dbFactory.ts';
 import { insertInfo } from '../../db/insertInfo.ts';
-import { fillMonthGaps } from '../computeStats.ts';
+import { fillMonthGaps } from '../months.ts';
 import { liveTotal, readStats, refreshStats } from '../statsStore.ts';
+import type { CacheStats } from '../types.ts';
 
 /** Four molecules with deliberately different shapes. */
 const MOLECULES = [
@@ -166,7 +167,7 @@ test('a gap across a new year counts through December', () => {
     fillMonthGaps([
       { month: '2025-11', count: 2 },
       { month: '2026-02', count: 1 },
-    ]).map((entry) => entry.month),
+    ]).map((entry: { month: string }) => entry.month),
   ).toStrictEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
 });
 
@@ -175,4 +176,80 @@ test('a single month, and no month at all, need no filling', () => {
     { month: '2026-09', count: 4 },
   ]);
   expect(fillMonthGaps([])).toStrictEqual([]);
+});
+
+test('a pass that reads only the new molecules agrees with one that reads all', async () => {
+  const db = await seed();
+  // Count the first four, then add four more and refresh incrementally.
+  await refreshStats(db);
+  for (const smiles of ['CCCCCCO', 'NCCc1ccc(O)c(O)c1', 'CCN', 'OCCO']) {
+    insertInfo(calculateMoleculeInfo(Molecule.fromSmiles(smiles)), db);
+  }
+
+  const incremental = await refreshStats(db);
+  const fromScratch = await refreshStats(db, { full: true });
+
+  // The incremental pass read only the four that arrived.
+  expect(incremental.scanned).toBe(4);
+  expect(fromScratch.scanned).toBe(8);
+
+  // Everything that adds up is identical to a pass over all eight. The two
+  // distinct counts and the formula ranking are not compared: an incremental
+  // pass deliberately carries them forward rather than walking the table.
+  const { mass: incrementalMass, ...incrementalRest } = additiveOf(
+    incremental.stats,
+  );
+  const { mass: exactMass, ...exactRest } = additiveOf(fromScratch.stats);
+  expect(incrementalRest).toStrictEqual(exactRest);
+
+  // The mass totals are summed in a different order, so they agree to within
+  // floating-point rather than bit for bit.
+  expect(incrementalMass.min).toBe(exactMass.min);
+  expect(incrementalMass.max).toBe(exactMass.max);
+  expect(incrementalMass.counted).toBe(exactMass.counted);
+  expect(incrementalMass.sum).toBeCloseTo(exactMass.sum, 9);
+});
+
+/**
+ * The figures a pass can add to another, which are the ones an incremental
+ * refresh has to reproduce exactly.
+ * @param stats - a rollup
+ * @returns it, without the three that need the whole table
+ */
+function additiveOf(stats: CacheStats) {
+  const {
+    distinctNoStereoID: _distinct,
+    distinctNoStereoTautomerID: _distinctTautomer,
+    topFormulas: _formulas,
+    ...additive
+  } = stats;
+  return additive;
+}
+
+test('an incremental pass carries the whole-table figures forward', async () => {
+  const db = await seed();
+  await refreshStats(db);
+  insertInfo(calculateMoleculeInfo(Molecule.fromSmiles('CCN')), db);
+
+  const next = await refreshStats(db);
+
+  // Four distinct structures were counted by the full pass; the fifth molecule
+  // is in the additive totals but not yet in the distinct count, which is what
+  // "carried forward" means.
+  expect(next.full).toBe(false);
+  expect(next.stats.total).toBe(5);
+  expect(next.stats.distinctNoStereoID).toBe(4);
+});
+
+test('merging is exact for a mass total, not reconstructed from a mean', async () => {
+  const db = await seed();
+  await refreshStats(db);
+  insertInfo(calculateMoleculeInfo(Molecule.fromSmiles('CCN')), db);
+
+  const merged = await refreshStats(db);
+  const exact = await refreshStats(db, { full: true });
+
+  expect(merged.stats.mass.sum).toBeCloseTo(exact.stats.mass.sum, 9);
+  expect(merged.stats.mass.min).toBe(exact.stats.mass.min);
+  expect(merged.stats.mass.max).toBe(exact.stats.mass.max);
 });

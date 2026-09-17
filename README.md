@@ -63,19 +63,37 @@ renamed still opens.
 
 ## Statistics
 
-Every figure but the molecule count comes from a full pass over `molecules`,
-run by the `refresh-stats` service rather than inside a request: two
-`COUNT(DISTINCT)` queries alone take seconds on a large cache. The pass writes
-one JSON rollup, and `/v1/stats` reads it, so the page costs one row read
-however far the cache has grown. `computedAt` says how old the figures are.
+`/v1/stats` reads **one row**, so the page costs the same whether the cache
+holds two million molecules or two hundred million. Measured against a 2M-row
+database: 0.038 ms for the whole route body, and the stored rollup is a fixed
+8.5 KB whatever the cache has grown to. The molecule count beside it is live and
+free — no row is ever deleted, so the rowids run `1..n` and the last one is the
+count, which SQLite answers by seeking one end of the b-tree.
 
-The molecule count is live and free: no row is ever deleted, so the rowids run
-`1..n` and the last one is the count — which SQLite answers by seeking one end
-of the b-tree.
+The figures behind it come from the `refresh-stats` service, never from a
+request. The table is only ever appended to, so a pass normally reads just the
+molecules that arrived since the last one and adds them to what was already
+counted — every histogram, count and total is additive. Measured on 2M rows:
 
-**Molecules cached before release 1.2 carry no date**, because the column did
-not exist. They are counted apart on the statistics page rather than folded
-into a month they may not belong to; everything cached since carries the day it
+| pass                        | reads                | time                |
+| --------------------------- | -------------------- | ------------------- |
+| incremental (the usual one) | 50 000 new molecules | **0.18 s**          |
+| full                        | all 2 000 000        | 12.5 s (6.3 µs/row) |
+
+Only three figures cannot be added to — the two distinct counts and the formula
+ranking, which have to see every row. They are carried forward between full
+passes, so they are refreshed on `STATS_FULL_INTERVAL` (daily) rather than on
+every pass. At two hundred million molecules a full pass is around twenty
+minutes; set it weekly if that is too often.
+
+A full pass sorts every id in the table. SQLite is told to spill that sort to
+`$DATA_DIR/tmp` rather than hold it: in memory it costs ~21 bytes per distinct
+value — over four gigabytes at two hundred million, more than the container is
+given — and spilled it costs ~3 bytes and runs faster.
+
+**Molecules cached before release 2.0 carry no date**, because the column did
+not exist. They are counted apart on the statistics page rather than folded into
+a month they may not belong to; everything cached since carries the day it
 arrived.
 
 ## Bulk import

@@ -2,7 +2,11 @@
 set -e
 
 DATA_DIR="${DATA_DIR:-/app/data}"
-mkdir -p "$DATA_DIR/sqlite" "$DATA_DIR/sdf/to_process" "$DATA_DIR/sdf/processed" \
+# `tmp` is where SQLite spills the sorter of a full statistics pass. It has to
+# be on the data volume: the root filesystem is read-only and /tmp is a tmpfs,
+# so spilling there would cost memory rather than save it.
+mkdir -p "$DATA_DIR/sqlite" "$DATA_DIR/tmp" \
+  "$DATA_DIR/sdf/to_process" "$DATA_DIR/sdf/processed" \
   "$DATA_DIR/smiles/to_process" "$DATA_DIR/smiles/processed"
 
 # A database written by 1.1.x lives in /app/sqlite; adopt it when mounted.

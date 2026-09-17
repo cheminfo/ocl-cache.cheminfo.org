@@ -26,6 +26,7 @@ services:
       TRACKING_SCRIPT: ${TRACKING_SCRIPT:-}
       SITE_URL: ${SITE_URL:-}
       STATS_INTERVAL: ${STATS_INTERVAL:-}
+      STATS_FULL_INTERVAL: ${STATS_FULL_INTERVAL:-}
     healthcheck:
       test:
         [
@@ -73,6 +74,7 @@ services:
       TRACKING_SCRIPT: ${TRACKING_SCRIPT:-}
       SITE_URL: ${SITE_URL:-}
       STATS_INTERVAL: ${STATS_INTERVAL:-}
+      STATS_FULL_INTERVAL: ${STATS_FULL_INTERVAL:-}
     logging:
       driver: 'json-file'
       options:
@@ -115,6 +117,10 @@ services:
       TRACKING_SCRIPT: ${TRACKING_SCRIPT:-}
       SITE_URL: ${SITE_URL:-}
       STATS_INTERVAL: ${STATS_INTERVAL:-}
+      STATS_FULL_INTERVAL: ${STATS_FULL_INTERVAL:-}
+      # The full pass sorts every id in the table; it spills to the data volume
+      # rather than to memory or to the tmpfs. See docker-entrypoint.sh.
+      SQLITE_TMPDIR: ${DATA_DIR:-/app/data}/tmp
     logging:
       driver: 'json-file'
       options:
