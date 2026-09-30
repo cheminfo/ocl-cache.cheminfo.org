@@ -3,6 +3,7 @@ import { MF } from 'react-mf';
 import type { MoleculeInfo } from '../api/types.ts';
 
 import { AtomCounts } from './AtomCounts.tsx';
+import { atomCountsText } from './copyableValue.ts';
 
 /** One property, as the table writes it. */
 export interface Property {
@@ -15,6 +16,12 @@ export interface Property {
    * @default undefined
    */
   note?: string;
+  /**
+   * What a click on the value copies, when the value is drawn rather than
+   * written: a formula drawn by `<MF>` copies its plain string.
+   * @default undefined — the value itself is copied when it is text
+   */
+  copy?: string;
 }
 
 /**
@@ -24,7 +31,7 @@ export interface Property {
  */
 export function compositionRows(info: MoleculeInfo): Property[] {
   return [
-    { label: 'Molecular formula', value: <MF mf={info.mf} /> },
+    { label: 'Molecular formula', value: <MF mf={info.mf} />, copy: info.mf },
     {
       label: 'Monoisotopic mass',
       value: decimal(info.em, 4),
@@ -43,7 +50,11 @@ export function compositionRows(info: MoleculeInfo): Property[] {
       value: integer(info.nbFragments),
       note: 'disconnected parts',
     },
-    { label: 'Atoms', value: <AtomCounts atoms={info.atoms} /> },
+    {
+      label: 'Atoms',
+      value: <AtomCounts atoms={info.atoms} />,
+      copy: atomCountsText(info.atoms),
+    },
   ];
 }
 
@@ -76,15 +87,17 @@ export function predictedRows(info: MoleculeInfo): Property[] {
  */
 export function identifierRows(info: MoleculeInfo): Property[] {
   return [
-    { label: 'idCode', value: <code>{info.idCode}</code> },
+    { label: 'idCode', value: <code>{info.idCode}</code>, copy: info.idCode },
     {
       label: 'No stereo',
       value: <code>{info.noStereoID}</code>,
+      copy: info.noStereoID,
       note: 'stereochemistry dropped',
     },
     {
       label: 'No stereo, no tautomer',
       value: <code>{info.noStereoTautomerID}</code>,
+      copy: info.noStereoTautomerID,
       note:
         info.failedTautomerID === 1
           ? 'canonicalisation gave up — the no-stereo id is repeated'

@@ -1,6 +1,9 @@
 import { formatInteger } from 'react-cheminfo/core';
+import { ClickToCopy } from 'react-cheminfo/ui';
 
 import type { CacheStats } from '../api/types.ts';
+
+import { copyableText } from './copyableValue.ts';
 
 /** What the tile row needs. */
 export interface StatTilesProps {
@@ -14,7 +17,8 @@ export interface StatTilesProps {
  * The headline figures, as a row of tiles.
  *
  * `total` is current; everything drawn from the rollup is as old as the pass
- * that wrote it, which the page says above.
+ * that wrote it, which the page says above. A figure is copied by clicking it,
+ * exactly as it is written.
  * @param props - The live total and the rollup.
  * @returns The tiles.
  */
@@ -61,15 +65,26 @@ export function StatTiles(props: StatTilesProps) {
 
   return (
     <div className="stat-tiles" data-testid="stat-tiles">
-      {tiles.map((tile) => (
-        <div key={tile.label} className="stat-tile">
-          <span className="stat-tile__value">{tile.value}</span>
-          <span className="stat-tile__label">{tile.label}</span>
-          {tile.note !== '' && (
-            <span className="stat-tile__note">{tile.note}</span>
-          )}
-        </div>
-      ))}
+      {tiles.map((tile) => {
+        const copy = copyableText(tile.value);
+        return (
+          <div key={tile.label} className="stat-tile">
+            <ClickToCopy
+              as="div"
+              className="stat-tile__value"
+              value={copy ?? ''}
+              label={tile.label}
+              disabled={copy === null}
+            >
+              {tile.value}
+            </ClickToCopy>
+            <span className="stat-tile__label">{tile.label}</span>
+            {tile.note !== '' && (
+              <span className="stat-tile__note">{tile.note}</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

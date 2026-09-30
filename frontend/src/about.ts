@@ -20,6 +20,7 @@ export const ABOUT: AboutContent = {
     'Search the cache for every molecule containing a fragment.',
     'See what the whole database holds, and when it arrived.',
     'Call the same lookups over HTTP, documented at /docs.',
+    'Take any value away with a click: a formula, a mass, an idCode.',
   ],
   paragraphs: [
     'A property is computed the first time it is asked for and stored under the OpenChemLib idCode, so the second request is a read rather than a calculation. The cache fills itself: a molecule nobody has asked for yet is computed on the spot.',

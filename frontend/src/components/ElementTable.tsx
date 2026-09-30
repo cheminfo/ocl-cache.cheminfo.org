@@ -1,4 +1,5 @@
 import { formatInteger } from 'react-cheminfo/core';
+import { ClickToCopy } from 'react-cheminfo/ui';
 
 import type { CacheStats } from '../api/types.ts';
 
@@ -54,9 +55,14 @@ export function ElementTable(props: ElementTableProps) {
         <ul className="bar-list">
           {stats.topFormulas.map((formula) => (
             <li key={formula.mf} className="bar-list__row">
-              <span className="bar-list__key bar-list__key--wide">
+              <ClickToCopy
+                as="div"
+                className="bar-list__key bar-list__key--wide"
+                value={formula.mf}
+                label="formula"
+              >
                 <code>{formula.mf}</code>
-              </span>
+              </ClickToCopy>
               <span className="bar-list__value">
                 {formatInteger(formula.count)}
               </span>

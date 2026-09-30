@@ -180,8 +180,11 @@
   vertical-align: top;
 }
 
+/* Every value is a copy target, so each cell keeps room for the tick the copy
+   confirms with; the room is kept on all of them, including the rows the cache
+   holds no value for, so the column still reads on one right edge. */
 .property-table td {
-  padding: 0.3rem 0;
+  padding: 0.3rem 22px 0.3rem 0;
   font-variant-numeric: tabular-nums;
   text-align: right;
   vertical-align: top;
