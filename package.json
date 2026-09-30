@@ -42,12 +42,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cheminfo/ocl-cache.git"
+    "url": "git+https://github.com/cheminfo/ocl-cache.cheminfo.org.git"
   },
   "bugs": {
-    "url": "https://github.com/cheminfo/ocl-cache/issues"
+    "url": "https://github.com/cheminfo/ocl-cache.cheminfo.org/issues"
   },
-  "homepage": "https://github.com/cheminfo/ocl-cache#readme",
+  "homepage": "https://github.com/cheminfo/ocl-cache.cheminfo.org#readme",
   "volta": {
     "node": "24.6.0"
   }
