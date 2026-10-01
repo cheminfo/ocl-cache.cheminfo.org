@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -7,17 +7,19 @@ import pino from 'pino';
 import Postgrator from 'postgrator';
 
 import { DB } from './DB.ts';
+import {
+  BUSY_TIMEOUT,
+  applyConnectionPragmas,
+  slowQueryLogPath,
+  watchWalSize,
+} from './connection.ts';
 
 const logger = pino({ messageKey: 'dbFactory' });
-
-const WAL_CHECKPOINT_THRESHOLD = 100_000_000;
-const WAL_CHECK_INTERVAL = 300_000;
 
 // Three containers share the file and migrate at startup, so a process may
 // have to wait for a whole migration: building an index over two million rows
 // is minutes, and the usual 30 s would turn that wait into a crash loop.
 const MIGRATION_BUSY_TIMEOUT = 600_000;
-const BUSY_TIMEOUT = 30_000;
 
 const WAL_RETRY_DELAY = 200;
 const WAL_RETRY_ATTEMPTS = 50;
@@ -26,6 +28,7 @@ const WAL_RETRY_ATTEMPTS = 50;
 const SQLITE_BUSY = 5;
 
 let instance: Promise<DB> | undefined;
+let walWatcher: NodeJS.Timeout | undefined;
 
 /**
  * Returns the singleton on-disk database, creating it on first call.
@@ -49,8 +52,8 @@ async function openDB(): Promise<DB> {
   await prepareDB(db);
   db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT}`);
 
-  watchWalSize(db, file);
-  return new DB(db, join(dirname(file), 'slow-queries.log'));
+  walWatcher = watchWalSize(db, file);
+  return new DB(db, slowQueryLogPath(file));
 }
 
 /**
@@ -128,7 +131,7 @@ export async function prepareDB(db: DatabaseSync): Promise<void> {
 async function applyPragmas(db: DatabaseSync): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     try {
-      _applyPragmas(db);
+      applyConnectionPragmas(db);
       return;
     } catch (error) {
       if (
@@ -144,20 +147,6 @@ async function applyPragmas(db: DatabaseSync): Promise<void> {
 }
 
 /**
- * Apply the pragmas every on-disk connection needs. Never called for an
- * in-memory database, where WAL is silently ignored.
- * @param db - the connection to configure
- */
-const _applyPragmas = (db: DatabaseSync): void => {
-  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT}`);
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA synchronous = OFF');
-  // node:sqlite defaults to a 2 MB page cache, far too small for this workload.
-  db.exec('PRAGMA cache_size = -131072');
-  db.exec('PRAGMA temp_store = MEMORY');
-};
-
-/**
  * Move a database left at the pre-`data/` location by an earlier release.
  * @param file - the current database path
  */
@@ -170,21 +159,14 @@ function migrateLegacyLocation(file: string): void {
 }
 
 /**
- * Checkpoint the write-ahead log once it grows past the threshold.
- * @param db - the connection to checkpoint
- * @param file - the database path, used to find the WAL file
+ * Stop checkpointing from this thread.
+ *
+ * `wal_checkpoint(RESTART)` is a write, and `node:sqlite` runs it
+ * synchronously: on the thread serving requests it stalls every one of them
+ * for as long as it takes. A process that starts a writer thread hands the job
+ * over to it.
  */
-function watchWalSize(db: DatabaseSync, file: string): void {
-  setInterval(() => {
-    try {
-      if (statSync(`${file}-wal`).size > WAL_CHECKPOINT_THRESHOLD) {
-        db.exec('PRAGMA wal_checkpoint(RESTART)');
-        logger.info('Restarted wal file');
-      }
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        logger.error(error);
-      }
-    }
-  }, WAL_CHECK_INTERVAL).unref();
+export function stopWalCheckpointing(): void {
+  clearInterval(walWatcher);
+  walWatcher = undefined;
 }

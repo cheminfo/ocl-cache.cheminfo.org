@@ -19,14 +19,15 @@ Running at [ocl-cache.cheminfo.org](https://ocl-cache.cheminfo.org).
 
 Every route lives under `/v1`.
 
-| Route                 | Query                      | Returns                                     |
-| --------------------- | -------------------------- | ------------------------------------------- |
-| `GET /v1/lookup`      | `q`, `kind?`, `cacheOnly?` | one molecule, in any of the three notations |
-| `GET /v1/stats`       | —                          | the figures the statistics page draws       |
-| `GET /v1/fromSmiles`  | `smiles`                   | molecule information for a SMILES           |
-| `GET /v1/fromMolfile` | `molfile`                  | molecule information for a molfile          |
-| `GET /v1/fromIDCode`  | `idCode`                   | molecule information for an OCL idCode      |
-| `GET /health`         | —                          | `{"status":"ok"}`                           |
+| Route                 | Query                                  | Returns                                     |
+| --------------------- | -------------------------------------- | ------------------------------------------- |
+| `GET /v1/lookup`      | `q`, `kind?`, `cacheOnly?`             | one molecule, in any of the three notations |
+| `POST /v1/batch`      | body: `queries`, `kind?`, `cacheOnly?` | many molecules in one request               |
+| `GET /v1/stats`       | —                                      | the figures the statistics page draws       |
+| `GET /v1/fromSmiles`  | `smiles`                               | molecule information for a SMILES           |
+| `GET /v1/fromMolfile` | `molfile`                              | molecule information for a molfile          |
+| `GET /v1/fromIDCode`  | `idCode`                               | molecule information for an OCL idCode      |
+| `GET /health`         | —                                      | `{"status":"ok"}`                           |
 
 ```sh
 curl 'https://ocl-cache.cheminfo.org/v1/lookup?q=CCOCC'
@@ -34,12 +35,92 @@ curl 'https://ocl-cache.cheminfo.org/v1/lookup?q=CCOCC'
 
 `q` is read as a molfile when it carries a counts line, as an idCode when it
 writes itself back unchanged, and as a SMILES otherwise; `kind` says so
-explicitly. A molecule that is not cached is computed on the spot, stored and
-returned — unless `cacheOnly` is set, which makes a miss return nothing.
+explicitly. A molecule that is not cached is computed on the spot and returned
+— unless `cacheOnly` is set, which makes a miss return nothing. The row is
+written a moment later, by a thread of its own, so an answer never waits on the
+database's write lock.
 
-The cache answers for one molecule at a time. It deliberately offers no query
-that walks the whole table: the `ssIndex` columns are kept for a future
-substructure screen, and nothing exposes them over HTTP.
+### Many at once
+
+`POST /v1/batch` takes up to 1000 queries and answers each on its own, so one
+string that is not a molecule reports its error and leaves the rest alone. A
+structure the batch names twice — under two spellings, even — is computed once.
+
+```sh
+curl -X POST https://ocl-cache.cheminfo.org/v1/batch \
+  -H 'content-type: application/json' \
+  -d '{"queries": ["CCOCC", "c1ccccc1", "gJQ@@eKU@@"]}'
+```
+
+```json
+{
+  "results": [
+    {
+      "query": "CCOCC",
+      "result": { "idCode": "gJQ@@eKU@@", "mf": "C4H10O" },
+      "cached": true,
+      "kind": "smiles"
+    }
+  ],
+  "summary": { "total": 3, "cached": 2, "computed": 1, "failed": 0 }
+}
+```
+
+### Browsing and searching by structure
+
+`GET /v1/search` pages through the cache, narrowed by structure, by property, or
+by both. With no `q` it browses everything, newest last.
+
+```sh
+curl 'https://ocl-cache.cheminfo.org/v1/search?q=c1ccccc1&mode=substructure&limit=24'
+curl 'https://ocl-cache.cheminfo.org/v1/search?mwMin=100&mwMax=250&donorsMax=2'
+```
+
+| Parameter                | Meaning                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`, `kind`              | the structure to match; absent, everything is browsed                                                                                   |
+| `mode`                   | `substructure`, `similarity`, `exact`, `exactNoStereo`, `exactNoStereoTautomer`                                                         |
+| `limit`, `cursor`        | the page size (24, at most 96) and where the page starts                                                                                |
+| `mf`                     | one exact molecular formula                                                                                                             |
+| `<name>Min`, `<name>Max` | bounds on `mw`, `em`, `logP`, `logS`, `psa`, `acceptors`, `donors`, `rotatable`, `stereocentres`, `fragments`, `charge`, `unsaturation` |
+
+A property filter is applied as the candidate set a structure scan is restricted
+to, never to its results: the whole cost of a scan is the candidates it reads.
+
+**It never counts.** `COUNT(*)` here is a walk of 150 million rows, so a browse
+answers "is there another page" by reading one row more than it was asked for,
+and `total` is null. A structure scan reports what it matched within its own
+bound. Pagination is a cursor on the rowid rather than an offset, because
+`OFFSET` makes SQLite walk and discard everything before the page.
+
+### The structure keys
+
+Every answer carries three 64-bit keys beside the idCodes they belong to, each
+as the 16 hex digits a JSON number could not hold:
+
+| Field                  | What it identifies                                                |
+| ---------------------- | ----------------------------------------------------------------- |
+| `hash`                 | the row's own idCode — the key the cache is looked up by          |
+| `noStereoHash`         | the compound up to stereochemistry: both enantiomers key the same |
+| `noStereoTautomerHash` | the compound up to stereochemistry and tautomerism as well        |
+
+They are OpenChemLib's own hashes, so they are the values any other OpenChemLib
+build computes for the same structure. Each is the hash of the canonical idCode
+in the column next to it, computed from it in one pass rather than by canonizing
+twice.
+
+`hash` is not chemistry: it is the hasher run over the idCode's characters, which
+needs no molecule and costs about 1.3 µs. That is what lets a presence check
+happen on the thread serving the request, and what lets the table be probed
+through an 8-byte integer index rather than a 40-byte text one. It is not unique
+— two idCodes share one once in 2^64 — so every read seeks on it and confirms the
+idCode in the same statement.
+
+`noStereoTautomerHash` is null when the molecule has none: either OpenChemLib
+could not read it, or its tautomer enumeration reached the 5000-tautomer ceiling
+and the generic form it had reached is not canonical. `failedTautomerID` says so
+too. The ceiling is a work bound and not a clock, so the same molecule reaches it
+on every machine and two hosts filling one cache agree about what a compound is.
 
 ### Sharing and embedding
 
@@ -102,20 +183,53 @@ Drop `.sdf` (optionally gzipped or zipped) files into `data/sdf/to_process`, or
 SMILES files into `data/smiles/to_process`. The `process-sdf` service picks them
 up, appends every new molecule to the cache, and moves the file to `processed`.
 
+## The search index
+
+Substructure, similarity and identity search run off a second database,
+`data/sqlite/search.sqlite`, holding the fingerprint index and the two identity
+hashes. **The cache's own schema is never touched**: nothing is added to
+`molecules`, so bringing search up needs no migration over 150 million rows and
+no window during which the API cannot answer.
+
+The `index-molecules` service fills it and keeps it filled. It starts with the
+stack and needs no operator action; `docker compose logs -f index-molecules`
+shows its progress. The index can be deleted and rebuilt — or built on another
+machine and copied in — without the cache noticing.
+
+It adds molecules the index does not hold yet, then hashes them. The
+fingerprints go first and completely, because they are what a substructure
+search needs; the hashes only answer the two identity modes and cost two orders
+of magnitude more per molecule.
+
+The fingerprint is read out of the cache rather than recomputed: every row has
+carried its `ssIndex` since the first release. Measured over real idcodes, that
+is **88 µs a molecule against 1350** — under four hours against fifty-six at 150
+million.
+
+Measured over 400 000 indexed entries on eight threads, the first page of a
+substructure search costs 4–49 ms whatever the table size, because it stops at
+the end of the chunk that reached the limit. An exhaustive scan is 25 minutes to
+3.6 hours at 150 million depending on how common the fragment is, which is why
+no route offers one.
+
 ## Environment
 
-| Variable          | Default                       | Meaning                                                                                                                                                  |
-| ----------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`            | `20822`                       | port the API listens on; the Vite dev server sits one above it                                                                                           |
-| `DATA_DIR`        | `<repo>/data`                 | holds `sqlite/` and the import queues                                                                                                                    |
-| `TRACKING_SCRIPT` | unset                         | audience-measurement snippet, injected verbatim at the end of the served page's `<head>`; unset loads nothing, so a dev run tracks nothing               |
-| `SITE_URL`        | unset                         | where the site is served from, written into every canonical link and sitemap entry; unset uses the request's host                                        |
-| `STATS_INTERVAL`  | `21600000`                    | milliseconds between two statistics passes                                                                                                               |
-| `TRUST_PROXY`     | unset (`false`)               | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count                                                  |
-| `WORKER_THREADS`  | the container's CPU allowance | openchemlib worker threads per service; a cgroup hides the real quota from `/proc/cpuinfo`, so an unbounded pool is killed for reaching the memory limit |
-| `IMAGE_NAME`      | `ghcr.io/cheminfo/ocl-cache`  | image the compose files run                                                                                                                              |
-| `IMAGE_TAG`       | `latest`                      | rewritten by the server's deploy script — never edit by hand                                                                                             |
-| `TUNNEL_TOKEN`    | —                             | Cloudflare Tunnel token, cloudflared mode only                                                                                                           |
+| Variable              | Default                       | Meaning                                                                                                                                                  |
+| --------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                | `20822`                       | port the API listens on; the Vite dev server sits one above it                                                                                           |
+| `DATA_DIR`            | `<repo>/data`                 | holds `sqlite/` and the import queues                                                                                                                    |
+| `TRACKING_SCRIPT`     | unset                         | audience-measurement snippet, injected verbatim at the end of the served page's `<head>`; unset loads nothing, so a dev run tracks nothing               |
+| `SITE_URL`            | unset                         | where the site is served from, written into every canonical link and sitemap entry; unset uses the request's host                                        |
+| `STATS_INTERVAL`      | `21600000`                    | milliseconds between two statistics passes                                                                                                               |
+| `INDEX_LIMIT`         | `500000`                      | molecules the `index-molecules` service adds per window                                                                                                  |
+| `INDEX_INTERVAL`      | `10000`                       | milliseconds it pauses between two windows that still had work                                                                                           |
+| `INDEX_IDLE_INTERVAL` | `60000`                       | milliseconds it waits before looking again once everything is indexed                                                                                    |
+| `INDEX_HASHES`        | `true`                        | set `false` to index fingerprints only, leaving the two identity modes empty                                                                             |
+| `TRUST_PROXY`         | unset (`false`)               | proxies whose `X-Forwarded-For` is believed: an address, a CIDR, a comma-separated list, or a hop count                                                  |
+| `WORKER_THREADS`      | the container's CPU allowance | openchemlib worker threads per service; a cgroup hides the real quota from `/proc/cpuinfo`, so an unbounded pool is killed for reaching the memory limit |
+| `IMAGE_NAME`          | `ghcr.io/cheminfo/ocl-cache`  | image the compose files run                                                                                                                              |
+| `IMAGE_TAG`           | `latest`                      | rewritten by the server's deploy script — never edit by hand                                                                                             |
+| `TUNNEL_TOKEN`        | —                             | Cloudflare Tunnel token, cloudflared mode only                                                                                                           |
 
 ## Deployment
 

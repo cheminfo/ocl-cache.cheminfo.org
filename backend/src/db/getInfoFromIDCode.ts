@@ -1,12 +1,7 @@
-import pino from 'pino';
-
 import type { LookupOptions, MoleculeLookup } from '../MoleculeInfo.ts';
 
 import { getDB } from './dbFactory.ts';
-import { dbInfoToMoleculeInfo } from './dbInfoToMoleculeInfo.ts';
-import { insertMolecule } from './insertMolecule.ts';
-
-const logger = pino({ messageKey: 'getInfoFromIDCode' });
+import { getInfoForIdCode } from './getInfoForIdCode.ts';
 
 /**
  * Return information for a molecule from its idCode.
@@ -18,14 +13,5 @@ export async function getInfoFromIDCode(
   idCode: string,
   options: LookupOptions = {},
 ): Promise<MoleculeLookup> {
-  const db = await getDB();
-  const resultFromDB = db.searchIDCode.get(idCode);
-  if (resultFromDB) {
-    logger.trace('in cache');
-    return { info: dbInfoToMoleculeInfo(resultFromDB), cached: true };
-  }
-  if (options.cacheOnly) {
-    return { info: null, cached: false };
-  }
-  return { info: await insertMolecule(idCode, db), cached: false };
+  return getInfoForIdCode(idCode, await getDB(), options);
 }

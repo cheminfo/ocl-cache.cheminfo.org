@@ -1,16 +1,16 @@
 import type { Molecule } from 'openchemlib';
-import pino from 'pino';
 
 import type { LookupOptions, MoleculeLookup } from '../MoleculeInfo.ts';
 
 import type { DB } from './DB.ts';
-import { dbInfoToMoleculeInfo } from './dbInfoToMoleculeInfo.ts';
-import { insertMolecule } from './insertMolecule.ts';
-
-const logger = pino({ messageKey: 'getInfoFromMolecule' });
+import { getInfoForIdCode } from './getInfoForIdCode.ts';
 
 /**
  * Return information for a molecule, from the cache when it holds it.
+ *
+ * Reading the structure has already cost whichever thread called this the
+ * openchemlib parse; a server reads its queries in a worker instead and calls
+ * `getInfoForIdCode` directly.
  * @param molecule - instance of OCL Molecule
  * @param db - the database to read and fill
  * @param options - whether a miss may be computed and stored
@@ -21,15 +21,5 @@ export async function getInfoFromMolecule(
   db: DB,
   options: LookupOptions = {},
 ): Promise<MoleculeLookup> {
-  const idCode = molecule.getIDCode();
-  const resultFromDB = db.searchIDCode.get(idCode);
-
-  if (resultFromDB) {
-    logger.trace('in cache');
-    return { info: dbInfoToMoleculeInfo(resultFromDB), cached: true };
-  }
-  if (options.cacheOnly) {
-    return { info: null, cached: false };
-  }
-  return { info: await insertMolecule(idCode, db), cached: false };
+  return getInfoForIdCode(molecule.getIDCode(), db, options);
 }

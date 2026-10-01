@@ -139,3 +139,52 @@ services:
       start_period: 30s
       retries: 3
     command: ['node', 'src/scripts/refreshStats.ts']
+
+  # Keeps the search index in step with the cache: it adds every molecule the
+  # index does not hold yet, then hashes them. The index is a database of its
+  # own (data/sqlite/search.sqlite), so nothing here writes to the cache and the
+  # index can be deleted and rebuilt without touching 150 million rows.
+  #
+  # The fingerprint is read out of the cache rather than recomputed — 88 us a
+  # molecule against 1350 — which is the whole reason openchemlib-sqlite's
+  # insert() takes a precomputed entry.
+  index-molecules:
+    image: ${IMAGE_NAME:-ghcr.io/cheminfo/ocl-cache}:${IMAGE_TAG:-latest}
+    build: .
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ulimits:
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 8g
+    cpus: 2
+    pids_limit: 256
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-20822}
+      DATA_DIR: ${DATA_DIR:-/app/data}
+      WORKER_THREADS: ${WORKER_THREADS:-}
+      INDEX_LIMIT: ${INDEX_LIMIT:-}
+      INDEX_INTERVAL: ${INDEX_INTERVAL:-}
+      INDEX_IDLE_INTERVAL: ${INDEX_IDLE_INTERVAL:-}
+      INDEX_HASHES: ${INDEX_HASHES:-}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+    volumes:
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'node']
+      interval: 60s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    command: ['node', 'src/scripts/indexMolecules.ts']

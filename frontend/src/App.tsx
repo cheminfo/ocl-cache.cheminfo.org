@@ -11,6 +11,7 @@ import {
 
 import { ABOUT } from './about.ts';
 import { BrandMark } from './components/BrandMark.tsx';
+import { BrowsePage } from './pages/BrowsePage.tsx';
 import { SearchPage } from './pages/SearchPage.tsx';
 import { StatisticsPage } from './pages/StatisticsPage.tsx';
 import { SITE } from './site.ts';
@@ -19,9 +20,18 @@ import type { TabId } from './state/routes.ts';
 import { pathOf } from './state/routes.ts';
 import { SHARE_VOCABULARY, isEmbedded, isHidden } from './state/shareConfig.ts';
 
+/** What the share dialog calls each page. */
+const SHARE_TITLES: Record<TabId, string> = {
+  search: 'Molecule lookup',
+  browse: 'Browse the cache',
+  statistics: 'Statistics',
+  about: 'About',
+};
+
 /** The pages the menu lists, in order. */
 const PAGES: ReadonlyArray<{ id: TabId; label: string }> = [
-  { id: 'search', label: 'Search' },
+  { id: 'search', label: 'Lookup' },
+  { id: 'browse', label: 'Browse' },
   { id: 'statistics', label: 'Statistics' },
 ];
 
@@ -59,6 +69,8 @@ export function App() {
  */
 function Page(props: { tab: TabId }) {
   switch (props.tab) {
+    case 'browse':
+      return <BrowsePage />;
     case 'statistics':
       return <StatisticsPage />;
     case 'about':
@@ -96,19 +108,34 @@ function AppHeader(props: { tab: TabId }) {
           </a>
 
           <nav className="app-header-nav">
-            {!isHidden('pages') &&
-              PAGES.map((page) => (
+            {!isHidden('pages') && (
+              <>
+                {PAGES.map((page) => (
+                  <NavLink
+                    key={page.id}
+                    item={{
+                      id: page.id,
+                      label: page.label,
+                      href: pathOf(page.id),
+                      onSelect: () => selectTab(page.id),
+                    }}
+                    active={tab === page.id}
+                  />
+                ))}
+                {/* An address of this deployment rather than a utility: the
+                    utilities are About, Cite and Share, and nothing is wedged
+                    between them. */}
                 <NavLink
-                  key={page.id}
                   item={{
-                    id: page.id,
-                    label: page.label,
-                    href: pathOf(page.id),
-                    onSelect: () => selectTab(page.id),
+                    id: 'api',
+                    label: 'API',
+                    href: '/docs',
+                    external: true,
+                    title: 'The same lookups over HTTP, documented',
                   }}
-                  active={tab === page.id}
                 />
-              ))}
+              </>
+            )}
           </nav>
 
           <span className="spacer" />
@@ -134,24 +161,21 @@ function AppHeader(props: { tab: TabId }) {
         isOpen={sharing}
         onClose={() => setSharing(false)}
         vocabulary={SHARE_VOCABULARY}
-        title={tab === 'statistics' ? 'Statistics' : 'Molecule lookup'}
+        title={SHARE_TITLES[tab]}
       />
     </>
   );
 }
 
 /**
- * What sits under the page: the licence and the sources, and nothing else.
+ * What sits under the page: what it holds, and nothing else.
  * @returns The footer.
  */
 function AppFooter() {
   return (
     <footer className="app-footer no-print">
       <div className="app-footer__inner">
-        <span>
-          Cached molecule properties, computed with OpenChemLib. MIT licensed.
-        </span>
-        <a href={SITE.repository}>Source</a>
+        <span>Cached molecule properties, computed with OpenChemLib.</span>
       </div>
     </footer>
   );

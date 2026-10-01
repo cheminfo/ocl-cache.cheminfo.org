@@ -27,22 +27,24 @@ export class TypedStatementSync<T extends object> {
 
   /**
    * Run the statement and return the first row, if any.
-   * @param params - values bound to the statement placeholders
+   * @param params - values bound to the placeholders, or a single object
+   * binding the statement's named parameters
    * @returns the row, or undefined when the query matched nothing
    */
-  get(...params: SQLInputValue[]): T | undefined {
+  get(...params: SQLInputValue[] | [NamedParameters]): T | undefined {
     const start = performance.now();
-    const row = this.#statement.get(...params);
+    const row = this.#statement.get(...(params as SQLInputValue[]));
     this.#onTiming?.('[read]', performance.now() - start);
     return row === undefined ? undefined : ({ ...row } as T);
   }
 
   /**
    * Run the statement and return the first row, throwing when there is none.
-   * @param params - values bound to the statement placeholders
+   * @param params - values bound to the placeholders, or a single object
+   * binding the statement's named parameters
    * @returns the row
    */
-  getRequired(...params: SQLInputValue[]): T {
+  getRequired(...params: SQLInputValue[] | [NamedParameters]): T {
     const row = this.get(...params);
     if (row === undefined) {
       throw new Error('expected a row but found none');
@@ -52,12 +54,13 @@ export class TypedStatementSync<T extends object> {
 
   /**
    * Run the statement and return every matching row.
-   * @param params - values bound to the statement placeholders
+   * @param params - values bound to the placeholders, or a single object
+   * binding the statement's named parameters
    * @returns the rows
    */
-  all(...params: SQLInputValue[]): T[] {
+  all(...params: SQLInputValue[] | [NamedParameters]): T[] {
     const start = performance.now();
-    const rows = this.#statement.all(...params);
+    const rows = this.#statement.all(...(params as SQLInputValue[]));
     this.#onTiming?.('[read]', performance.now() - start);
     const result = new Array<T>(rows.length);
     for (let i = 0; i < rows.length; i++) {

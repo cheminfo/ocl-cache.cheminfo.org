@@ -13,7 +13,7 @@ test('each page is named on its own, and no two share a description', () => {
     'Statistics — what the cache holds',
   );
   expect(pageMetaFor('/about').title).toBe(
-    'About — what computes the properties, and under what licence',
+    'About — what computes the molecule properties',
   );
 
   const descriptions = ROUTES.map((route) => route.description);

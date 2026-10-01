@@ -33,6 +33,42 @@ export interface LookupResponse {
   kind: QueryKind;
 }
 
+/** How a structure query is matched against the cache. */
+export type SearchMode =
+  | 'substructure'
+  | 'similarity'
+  | 'exact'
+  | 'exactNoStereo'
+  | 'exactNoStereoTautomer';
+
+/** One molecule a browse or a search returned. */
+export interface SearchHit {
+  idCode: string;
+  /** Its molecular formula, when the answer carried one. */
+  mf?: string;
+  mw?: number;
+  /** The Tanimoto coefficient, in similarity mode only. */
+  similarity?: number;
+}
+
+/** What `/v1/search` answers. */
+export interface SearchResponse {
+  results: SearchHit[];
+  /**
+   * How many matched, or null when that is not known: a browse never counts,
+   * because counting this table is a walk of every row.
+   */
+  total: number | null;
+  /** Whether the scan stopped before reading every candidate. */
+  partial: boolean;
+  /** Candidates the fingerprint screen passed, substructure mode only. */
+  /** Where the next page starts, or null at the end. */
+  next: string | null;
+  screened?: number;
+  elapsedMs?: number;
+  kind?: QueryKind;
+}
+
 /** One bar of a histogram. */
 export interface HistogramBucket {
   from: number;

@@ -1,8 +1,8 @@
 import { Type } from '@sinclair/typebox';
 
 import { getDB } from '../db/dbFactory.ts';
-import { getInfoFromMolecule } from '../db/getInfoFromMolecule.ts';
-import { parseQuery } from '../search/parseQuery.ts';
+import { getInfoForIdCode } from '../db/getInfoForIdCode.ts';
+import { parseQueryInWorker } from '../search/parseQueryInWorker.ts';
 import type { FastifyTyped } from '../types.ts';
 
 import { CacheLookupResponseSchema, QueryKindSchema } from './schemas.ts';
@@ -37,13 +37,13 @@ export default function lookup(fastify: FastifyTyped) {
       const { q, kind, cacheOnly } = request.query;
       let parsed;
       try {
-        parsed = parseQuery(q, kind);
+        parsed = await parseQueryInWorker(q, kind);
       } catch {
         return reply.badRequest('that is not a molecule in any notation');
       }
 
       const db = await getDB();
-      const { info, cached } = await getInfoFromMolecule(parsed.molecule, db, {
+      const { info, cached } = await getInfoForIdCode(parsed.idCode, db, {
         cacheOnly,
       });
       return reply.send({ result: info, cached, kind: parsed.kind });

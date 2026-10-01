@@ -77,3 +77,54 @@ export const CacheLookupResponseSchema = Type.Object({
   }),
   kind: Type.String({ description: 'How the query was read' }),
 });
+
+/**
+ * How many queries one batch may carry.
+ *
+ * A batch is read a poolful at a time, so a larger one does not cost more
+ * memory than a smaller one — but it does hold a connection open for longer,
+ * and a client that wants more should send a second request.
+ */
+export const MAX_BATCH_QUERIES = 1000;
+
+/** What `/v1/batch` takes. */
+export const BatchRequestSchema = Type.Object({
+  queries: Type.Array(Type.String(), {
+    minItems: 1,
+    maxItems: MAX_BATCH_QUERIES,
+    description: 'The structures to look up, each a SMILES, molfile or idCode',
+  }),
+  kind: QueryKindSchema,
+  cacheOnly: Type.Optional(
+    Type.Boolean({
+      description:
+        'Return nothing for a miss instead of computing and storing it',
+    }),
+  ),
+});
+
+/** One query's answer inside a batch. */
+export const BatchResultSchema = Type.Object({
+  query: Type.String({ description: 'The query this answers' }),
+  result: Type.Union([MoleculeInfoSchema, Type.Null()]),
+  cached: Type.Boolean({
+    description: 'Whether it was already cached rather than computed now',
+  }),
+  kind: Type.Optional(Type.String({ description: 'How the query was read' })),
+  error: Type.Optional(
+    Type.String({ description: 'Why the query could not be read' }),
+  ),
+});
+
+/** What `/v1/batch` answers. */
+export const BatchResponseSchema = Type.Object({
+  results: Type.Array(BatchResultSchema, {
+    description: 'One answer per query, in the order they were sent',
+  }),
+  summary: Type.Object({
+    total: Type.Number(),
+    cached: Type.Number({ description: 'Answered from the cache' }),
+    computed: Type.Number({ description: 'Computed during this request' }),
+    failed: Type.Number({ description: 'Could not be read as a molecule' }),
+  }),
+});

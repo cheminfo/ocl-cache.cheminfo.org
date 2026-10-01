@@ -35,6 +35,13 @@ const SEARCH: RouteMeta = {
     'Type a SMILES, paste a molfile or draw a structure and read every property the cache holds for it: formula, exact mass, logP, logS, polar surface area and tautomer ids.',
 };
 
+const SUBSTRUCTURE: RouteMeta = {
+  path: '/substructure',
+  title: 'Substructure search — find molecules containing a fragment',
+  description:
+    'Draw a fragment and find every cached molecule that contains it, or search by similarity, by exact structure, or by the same compound whichever stereoisomer or tautomer.',
+};
+
 const STATISTICS: RouteMeta = {
   path: '/statistics',
   title: 'Statistics — what the cache holds',
@@ -50,11 +57,21 @@ const ABOUT: RouteMeta = {
 };
 
 /** Every page the site routes, which is also what the sitemap lists. */
-export const ROUTES: readonly RouteMeta[] = [SEARCH, STATISTICS, ABOUT];
+export const ROUTES: readonly RouteMeta[] = [
+  SEARCH,
+  SUBSTRUCTURE,
+  STATISTICS,
+  ABOUT,
+];
 
 /** The pages the crawl path lists, with a line each on what they are for. */
 const NOSCRIPT_ROUTES: readonly NoscriptRoute[] = [
   { ...SEARCH, short: 'Search', note: 'look a molecule up by its structure' },
+  {
+    ...SUBSTRUCTURE,
+    short: 'Substructure',
+    note: 'find every molecule that contains a fragment',
+  },
   {
     ...STATISTICS,
     short: 'Statistics',

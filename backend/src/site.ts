@@ -12,7 +12,6 @@ export const SITE = {
   id: 'ocl-cache' as EcosystemSite['id'],
   name: { lead: 'ocl-', alt: 'cache' },
   host: 'ocl-cache.cheminfo.org',
-  repository: 'https://github.com/cheminfo/ocl-cache.cheminfo.org',
   tagline:
     'Look up a molecule and read the properties already computed for it.',
   group: 'research',

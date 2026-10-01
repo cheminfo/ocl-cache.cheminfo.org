@@ -9,6 +9,12 @@ export const PAGE_ROUTES: readonly RouteMeta[] = [
       'Type a SMILES, paste a molfile or draw a structure and read every property the cache holds for it: formula, exact mass, logP, logS, polar surface area and tautomer ids.',
   },
   {
+    path: '/browse',
+    title: 'Browse the cache — by structure, by mass, by property',
+    description:
+      'Page through every cached molecule, or narrow it: draw a fragment to find what contains it, bound the molecular weight or logP, or ask for one exact formula.',
+  },
+  {
     path: '/statistics',
     title: 'Statistics — what the cache holds',
     description:
@@ -16,17 +22,22 @@ export const PAGE_ROUTES: readonly RouteMeta[] = [
   },
   {
     path: '/about',
-    title: 'About — what computes the properties, and under what licence',
+    title: 'About — what computes the molecule properties',
     description:
-      'What ocl-cache.cheminfo.org computes molecule properties with, the borrowed work it stands on, its licence, and where to report a problem.',
+      'What ocl-cache.cheminfo.org computes molecule properties with, the borrowed work it stands on, and the papers to cite when it helped.',
   },
 ];
 
 /** The pages a visitor can be on. */
-export type TabId = 'search' | 'statistics' | 'about';
+export type TabId = 'search' | 'browse' | 'statistics' | 'about';
 
 /** Every page, so an unknown address can be told from a known one. */
-export const VALID_TABS: readonly TabId[] = ['search', 'statistics', 'about'];
+export const VALID_TABS: readonly TabId[] = [
+  'search',
+  'browse',
+  'statistics',
+  'about',
+];
 
 /**
  * The address a page is reached at.

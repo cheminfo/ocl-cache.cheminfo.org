@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox';
 
 import { getDB } from '../db/dbFactory.ts';
-import { getInfoFromSmiles } from '../db/getInfoFromSmiles.ts';
+import { lookupQuery } from '../db/lookupQuery.ts';
 import type { FastifyTyped } from '../types.ts';
 
 import { LookupResponseSchema } from './schemas.ts';
@@ -22,11 +22,10 @@ export default function fromSmiles(fastify: FastifyTyped) {
     async (request, response) => {
       const db = await getDB();
       try {
-        const { info, cached } = await getInfoFromSmiles(
-          request.query.smiles,
-          db,
-        );
-        return await response.send({ result: info ?? {}, cached });
+        const { result, cached } = await lookupQuery(request.query.smiles, db, {
+          kind: 'smiles',
+        });
+        return await response.send({ result: result ?? {}, cached });
       } catch (error: unknown) {
         request.log.error(error);
         return response.send({ result: {}, log: error?.toString() });

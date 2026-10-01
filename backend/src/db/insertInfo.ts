@@ -1,49 +1,30 @@
-import { serialize } from 'bson';
 import pino from 'pino';
 
-import type {
-  DBMoleculeInfo,
-  MoleculeInfo,
-  SSIndexColumns,
-} from '../MoleculeInfo.ts';
+import type { MoleculeInfo } from '../MoleculeInfo.ts';
 
 import type { DB } from './DB.ts';
+import { nowSeconds, toDBMoleculeInfo } from './toDBMoleculeInfo.ts';
 
 const logger = pino({ messageKey: 'insertInfo' });
 
 /**
  * Store one molecule's computed information.
+ *
+ * This takes the write lock for the duration of its own transaction, which
+ * `node:sqlite` holds synchronously: never call it from a process serving
+ * requests. A server enqueues the row instead — see `writeQueue.ts`.
  * @param info - the computed properties
  * @param db - the database to write to
+ * @param createdAt - the insertion time to record, in unix seconds
  * @returns the insertion time written with the row, in unix seconds
  */
-export function insertInfo(info: MoleculeInfo, db: DB): number {
-  // 2 issues when we want to store the info in the database
-  // 1. Atoms is an object and we need to convert it to a string
-  // 2. Need to store the ssIndex as a blob
-
-  // in the DB we prefer to store int64 in order to make substructure preindex search in the future
-  const ssIndex = Int32Array.from(info.ssIndex);
-  const ssIndex64 = new BigInt64Array(ssIndex.buffer);
-
-  const ssIndexes = {} as SSIndexColumns;
-  for (let i = 0; i < 8; i++) {
-    ssIndexes[`ssIndex${i}` as keyof SSIndexColumns] = ssIndex64[i] ?? 0n;
-  }
-
-  const createdAt = Math.floor(Date.now() / 1000);
-  const stmtData: DBMoleculeInfo = {
-    ...info,
-    createdAt,
-    // node:sqlite refuses to bind undefined
-    unsaturation: info.unsaturation ?? null,
-    ssIndex: new Uint8Array(ssIndex.buffer),
-    atoms: serialize(info.atoms),
-    ...ssIndexes,
-  };
-
+export function insertInfo(
+  info: MoleculeInfo,
+  db: DB,
+  createdAt: number = nowSeconds(),
+): number {
   try {
-    db.insertInfo.run(stmtData);
+    db.insertInfo.run(toDBMoleculeInfo(info, createdAt));
   } catch (error: unknown) {
     logger.error(error, info.idCode);
   }

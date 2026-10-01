@@ -1,6 +1,5 @@
 import { Tag } from '@blueprintjs/core';
 import { Structure } from 'react-cheminfo/structure';
-import { CopyButton } from 'react-cheminfo/ui';
 
 import type { MoleculeInfo } from '../api/types.ts';
 import { isHidden } from '../state/shareConfig.ts';
@@ -42,7 +41,6 @@ export function MoleculeCard(props: MoleculeCardProps) {
           </Tag>
           <CachedSince createdAt={info.createdAt} cached={cached} />
         </div>
-        <CopyButton content={info.idCode} label="Copy idCode" minimal small />
       </header>
 
       <div className="molecule-card__body">

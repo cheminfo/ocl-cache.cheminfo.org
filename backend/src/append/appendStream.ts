@@ -4,7 +4,9 @@ import pino from 'pino';
 import calculateMoleculeInfoFromIDCodePromise from '../calculate/calculateMoleculeInfoFromIDCodePromise.ts';
 import type { DB } from '../db/DB.ts';
 import idCodeIsPresent from '../db/idCodeIsPresent.ts';
-import { insertInfo } from '../db/insertInfo.ts';
+import type { PendingWrite } from '../db/insertInfoBatch.ts';
+import { WRITE_BATCH_SIZE, insertInfoBatch } from '../db/insertInfoBatch.ts';
+import { nowSeconds } from '../db/toDBMoleculeInfo.ts';
 
 type GetMolecule = (entry: string) => Molecule;
 
@@ -24,6 +26,11 @@ export async function appendStream(
   let counter = 0;
   const { getMolecule } = options;
   const activePromises = new Set<Promise<void>>();
+  // Computed rows wait here until there are enough of them to be worth a
+  // transaction. One insert per molecule takes and releases the write lock
+  // every time, which is what made an import contend with everything else
+  // touching the file.
+  const batch: PendingWrite[] = [];
 
   logger.info('Start append');
 
@@ -43,7 +50,10 @@ export async function appendStream(
       const { promise } = await calculateMoleculeInfoFromIDCodePromise(idCode);
       const trackedPromise = promise
         .then((info) => {
-          insertInfo(info, db);
+          batch.push({ info, createdAt: nowSeconds() });
+          if (batch.length >= WRITE_BATCH_SIZE) {
+            insertInfoBatch(batch.splice(0), db);
+          }
         })
         .catch((error: unknown) => {
           logger.error(error?.toString());
@@ -60,6 +70,7 @@ export async function appendStream(
     newMolecules++;
   }
   await Promise.all(activePromises);
+  insertInfoBatch(batch.splice(0), db);
   logger.info(`Existing molecules: ${existingMolecules}`);
   logger.info(`New molecules: ${newMolecules}`);
 

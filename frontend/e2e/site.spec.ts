@@ -55,6 +55,24 @@ test('the statistics page says how many molecules are cached', async ({
   );
 });
 
+test('the header reaches the API documentation', async ({ page, request }) => {
+  await page.goto('/');
+
+  const link = page.getByRole('link', { name: 'API', exact: true });
+  await expect(link).toHaveAttribute('href', '/docs');
+  await expect(link).toHaveAttribute('target', '_blank');
+
+  const docs = await request.get('/docs/');
+  expect(docs.status()).toBe(200);
+  expect(await docs.text()).toContain('<div id="swagger-ui">');
+
+  const specResponse = await request.get('/docs/json');
+  const spec = (await specResponse.json()) as {
+    paths: Record<string, unknown>;
+  };
+  expect(Object.keys(spec.paths)).toContain('/v1/fromSmiles');
+});
+
 test('the About is a routed page with its own title', async ({ page }) => {
   const response = await page.goto('/about');
 
@@ -105,8 +123,17 @@ test('the API still answers its original routes', async ({ request }) => {
   expect(body.result.mf).toBe('C4H10O');
 });
 
-test('the cache offers no search that walks it', async ({ request }) => {
-  const response = await request.get('/v1/substructure?q=c1ccccc1');
+test('the cache searches by structure, and never unbounded', async ({
+  request,
+}) => {
+  const response = await request.get('/v1/search?q=c1ccccc1&limit=5');
+  expect(response.status()).toBe(200);
 
-  expect(response.status()).toBe(404);
+  const body = (await response.json()) as { results: unknown[] };
+  expect(body.results.length).toBeLessThanOrEqual(5);
+
+  // A link cannot ask for more than one page: an exhaustive scan of this table
+  // is minutes, so the bound is the route's, not the caller's.
+  const greedy = await request.get('/v1/search?limit=100000');
+  expect(greedy.status()).toBe(400);
 });

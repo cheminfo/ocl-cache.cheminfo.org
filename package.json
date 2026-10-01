@@ -10,17 +10,14 @@
     "backend",
     "frontend"
   ],
-  "engines": {
-    "node": ">=22.13.0"
-  },
   "scripts": {
-    "backfillKeys": "npm run backfillKeys -w backend",
     "check-deploy": "node node_modules/react-cheminfo/bin/check-deploy.mjs",
     "check-tokens": "node node_modules/react-cheminfo/bin/check-tokens.mjs frontend/src backend/src",
     "check-types": "npm run check-types -w backend && npm run check-types -w frontend",
     "dev": "lsof -ti:20822,20823 | xargs kill -9 2>/dev/null; concurrently --kill-others --kill-others-on-fail \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "eslint": "eslint .",
     "eslint-fix": "eslint . --fix",
+    "indexMolecules": "npm run indexMolecules -w backend",
     "prettier": "prettier --check .",
     "prettier-write": "prettier --write .",
     "processSDF": "npm run processSDF -w backend",
@@ -50,6 +47,6 @@
   },
   "homepage": "https://github.com/cheminfo/ocl-cache.cheminfo.org#readme",
   "volta": {
-    "node": "24.6.0"
+    "node": "26.10.0"
   }
 }

@@ -1,9 +1,11 @@
 import type { FastifyTyped } from '../types.ts';
 
+import batch from './batch.ts';
 import fromIDCode from './fromIDCode.ts';
 import fromMolfile from './fromMolfile.ts';
 import fromSmiles from './fromSmiles.ts';
 import lookup from './lookup.ts';
+import search from './search.ts';
 import stats from './stats.ts';
 
 /**
@@ -15,5 +17,7 @@ export default function v1(fastify: FastifyTyped) {
   fromMolfile(fastify);
   fromIDCode(fastify);
   lookup(fastify);
+  batch(fastify);
+  search(fastify);
   stats(fastify);
 }

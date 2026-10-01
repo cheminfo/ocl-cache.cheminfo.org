@@ -8,9 +8,11 @@ export default function calculateMoleculeInfoFromIDCode(
   idCode: string,
   options: { ignoreTautomer?: boolean } = {},
 ): MoleculeInfo {
-  const info = calculateMoleculeInfo(Molecule.fromIDCode(idCode), options);
-  // surprisingly in some cases the idCode is not 'stable' and if we recreate the idCode we don't obtain the same code
-  info.idCode = idCode;
-
-  return info;
+  // The idCode is handed on rather than re-derived: in some cases it is not
+  // stable, and recreating it from the Molecule does not give the same string.
+  // Every key the row is found by has to come from the one the row stores.
+  return calculateMoleculeInfo(Molecule.fromIDCode(idCode), {
+    ...options,
+    idCode,
+  });
 }

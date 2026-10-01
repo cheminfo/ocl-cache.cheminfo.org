@@ -20,6 +20,9 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/v1': `http://localhost:${backendPort}`,
+      // The API documentation is the backend's own page, and the header links
+      // to it, so a dev run must reach it too.
+      '/docs': `http://localhost:${backendPort}`,
     },
   },
 });

@@ -1,24 +1,9 @@
-import { EventEmitter } from 'node:events';
-import { join } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
-
-import { Piscina } from 'piscina';
-
 import type { MoleculeInfo } from '../MoleculeInfo.ts';
-import { workerThreadCount } from '../utils/workerThreadCount.ts';
 
 import calculateMoleculeInfoFromIDCode from './calculateMoleculeInfoFromIDCode.ts';
+import { pool, waitForCapacity } from './pool.ts';
 
-EventEmitter.defaultMaxListeners = 512; // default is 10 and we can have more processes
-
-const nbCPU = workerThreadCount();
-
-const piscina = new Piscina({
-  filename: join(import.meta.dirname, 'calculateMoleculeInfoFromIDCode.ts'),
-  minThreads: nbCPU,
-  maxThreads: nbCPU,
-  idleTimeout: 1000,
-});
+const COMPUTE_TIMEOUT = 60_000;
 
 /**
  * Multithread async function to calculate the information of a molecule from its idCode
@@ -30,30 +15,27 @@ export default async function calculateMoleculeInfoFromIDCodePromise(
 ): Promise<{ promise: Promise<MoleculeInfo> }> {
   const abortController = new AbortController();
 
-  // if in the queue we have over twice the number of cpu we wait
-  while (piscina.queueSize > nbCPU * 2) {
-    await delay(1);
-  }
-  const timeout = setTimeout(() => abortController.abort(), 60000);
+  // Returning an object holding the promise is what gives the caller back
+  // pressure: this await does not resolve while the pool's queue is full, so a
+  // producer reading a stream stops reading rather than queueing every entry.
+  await waitForCapacity();
+
+  const timeout = setTimeout(() => abortController.abort(), COMPUTE_TIMEOUT);
   let promise;
   try {
-    promise = piscina
-      .run(idCode, { signal: abortController.signal })
-      .then((info) => {
-        clearTimeout(timeout);
-        return info;
-      });
+    promise = (
+      pool.run(idCode, {
+        signal: abortController.signal,
+      }) as Promise<MoleculeInfo>
+    ).finally(() => {
+      clearTimeout(timeout);
+    });
   } catch {
     // it takes too long
     promise = Promise.resolve(
       calculateMoleculeInfoFromIDCode(idCode, { ignoreTautomer: true }),
     );
   }
-  // seems a little bit complex to return an object with a promise but it allows to deal
-  // with 'back pressure'
-  // we will not resolve the promise if this process has to wait because piscina does not have enough space in the queue
-  // by default we only allow 2 times the number of core in the piscina queue
-  return {
-    promise,
-  };
+
+  return { promise };
 }

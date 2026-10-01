@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "backfillKeys": "node src/scripts/backfillKeys.ts | pino-pretty",
     "check-types": "tsc --noEmit",
     "dev": "node --watch ./src/server.ts",
+    "indexMolecules": "node src/scripts/indexMolecules.ts | pino-pretty",
     "processSDF": "node src/scripts/processSDF.ts | pino-pretty",
     "processSmiles": "node src/scripts/processSmiles.ts | pino-pretty",
     "start": "node ./src/server.ts",
@@ -26,6 +26,7 @@
     "mass-tools": "^2.3.13",
     "openchemlib": "^9.25.0",
     "openchemlib-search-wasm": "^2.0.0",
+    "openchemlib-sqlite": "^5.2.0",
     "openchemlib-utils": "^8.18.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",

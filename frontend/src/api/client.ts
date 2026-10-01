@@ -1,4 +1,10 @@
-import type { LookupResponse, QueryKind, StatsResponse } from './types.ts';
+import type {
+  LookupResponse,
+  QueryKind,
+  SearchMode,
+  SearchResponse,
+  StatsResponse,
+} from './types.ts';
 
 /**
  * Look one molecule up, however its structure is written.
@@ -21,6 +27,42 @@ export async function lookupMolecule(
   if (options.kind) params.set('kind', options.kind);
   if (options.cacheOnly) params.set('cacheOnly', 'true');
   return request<LookupResponse>(`/v1/lookup?${params}`, options.signal);
+}
+
+/**
+ * Browse the cache, narrowed by structure and by property.
+ * @param options - what to ask for
+ * @param options.query - the structure, when one is being filtered on
+ * @param options.mode - how that structure is matched
+ * @param options.bounds - the numeric bounds, keyed by the filter's name
+ * @param options.mf - an exact molecular formula, or the empty string
+ * @param options.limit - how many molecules the page holds
+ * @param options.cursor - where the page starts, or null for the first
+ * @param options.signal - aborts the request when the question moves on
+ * @returns the page, and where the next one starts
+ */
+export async function browseCache(
+  options: {
+    query?: string;
+    mode?: SearchMode;
+    bounds?: Record<string, { min?: number; max?: number }>;
+    mf?: string;
+    limit?: number;
+    cursor?: string | null;
+    signal?: AbortSignal;
+  } = {},
+): Promise<SearchResponse> {
+  const params = new URLSearchParams();
+  if (options.query) params.set('q', options.query);
+  if (options.mode) params.set('mode', options.mode);
+  if (options.mf) params.set('mf', options.mf);
+  if (options.limit !== undefined) params.set('limit', String(options.limit));
+  if (options.cursor) params.set('cursor', options.cursor);
+  for (const [name, range] of Object.entries(options.bounds ?? {})) {
+    if (range.min !== undefined) params.set(`${name}Min`, String(range.min));
+    if (range.max !== undefined) params.set(`${name}Max`, String(range.max));
+  }
+  return request<SearchResponse>(`/v1/search?${params}`, options.signal);
 }
 
 /**

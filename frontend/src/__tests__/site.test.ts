@@ -12,9 +12,6 @@ test('this site is deliberately not one of the family, and nothing links to it',
 
 test('the record still carries everything the shared helpers read', () => {
   expect(SITE.host).toBe('ocl-cache.cheminfo.org');
-  expect(SITE.repository).toBe(
-    'https://github.com/cheminfo/ocl-cache.cheminfo.org',
-  );
   expect(SITE.name).toStrictEqual({ lead: 'ocl-', alt: 'cache' });
   expect(SITE.brand).toBe('#334155');
   expect(SITE.brandAlt).toBe('#b45309');

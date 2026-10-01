@@ -1,6 +1,7 @@
 import { Type } from '@sinclair/typebox';
 
-import { getInfoFromIDCode } from '../db/getInfoFromIDCode.ts';
+import { getDB } from '../db/dbFactory.ts';
+import { lookupQuery } from '../db/lookupQuery.ts';
 import type { FastifyTyped } from '../types.ts';
 
 import { LookupResponseSchema } from './schemas.ts';
@@ -19,9 +20,12 @@ export default function fromIDCode(fastify: FastifyTyped) {
       },
     },
     async (request, response) => {
+      const db = await getDB();
       try {
-        const { info, cached } = await getInfoFromIDCode(request.query.idCode);
-        return await response.send({ result: info ?? {}, cached });
+        const { result, cached } = await lookupQuery(request.query.idCode, db, {
+          kind: 'idCode',
+        });
+        return await response.send({ result: result ?? {}, cached });
       } catch (error: unknown) {
         request.log.error(error);
         return response.send({ result: {}, log: error?.toString() });

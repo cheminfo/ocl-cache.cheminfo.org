@@ -1,7 +1,7 @@
 import { Type } from '@sinclair/typebox';
 
 import { getDB } from '../db/dbFactory.ts';
-import { getInfoFromMolfile } from '../db/getInfoFromMolfile.ts';
+import { lookupQuery } from '../db/lookupQuery.ts';
 import type { FastifyTyped } from '../types.ts';
 
 import { LookupResponseSchema } from './schemas.ts';
@@ -22,11 +22,14 @@ export default function fromMolfile(fastify: FastifyTyped) {
     async (request, response) => {
       const db = await getDB();
       try {
-        const { info, cached } = await getInfoFromMolfile(
+        const { result, cached } = await lookupQuery(
           request.query.molfile,
           db,
+          {
+            kind: 'molfile',
+          },
         );
-        return await response.send({ result: info ?? {}, cached });
+        return await response.send({ result: result ?? {}, cached });
       } catch (error: unknown) {
         request.log.error(error);
         return response.send({ result: {}, log: error?.toString() });
