@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.0.0](https://github.com/cheminfo/ocl-cache.cheminfo.org/compare/v1.1.1...v2.0.0) (2026-10-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* serve a React frontend, and record when a molecule was cached
+* the database moved from ./sqlite to ./data/sqlite. Run `mkdir -p data/sqlite && mv sqlite/db.sqlite* data/sqlite/` before starting.
+
+### Features
+
+* copy any value with a click ([f919ad3](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/f919ad31ffaf7e9e72572c28f8b7269af7606b7f))
+* migrate to node:sqlite and current standards ([7db4ae9](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/7db4ae9801488ea93909f30ebde86f6faed7572b))
+* search the cache by structure and by property ([9f04ad4](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/9f04ad4bb221e790d50e907a88a1010f8afd9432))
+* **seo:** give every address its own text, above the crawl path ([dce9848](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/dce98486fbf2bb54d4dbe6e5e9dc46dc680e2fff))
+* serve a React frontend, and record when a molecule was cached ([d21fd35](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/d21fd35f47f9302a8d61a383a344c213e9a115e1))
+
+
+### Bug Fixes
+
+* **compose:** publish and run ghcr.io/cheminfo/ocl-cache, the package this repo builds ([1675261](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/16752612fffa80ce2551db3fc6be5df4c0f3cb2f))
+* default IMAGE_NAME to the image this repository publishes ([b94400f](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/b94400f0b31031398a55be71c784f6032652e183))
+* **docker:** publish the image this repository actually builds ([08f5d29](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/08f5d29abd76e001556762aa4b457bf89120f6d5))
+* link the repository by the name it now carries ([2bd16bf](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/2bd16bf2d0caa13e58546294e68d52b4e396466b))
+* name the image the workflow publishes, ocl-cache.cheminfo.org ([027737a](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/027737a0b62462cfe4d27e9101cb12c46517e493))
+* publish and pull ghcr.io/cheminfo/ocl-cache.cheminfo.org ([5487021](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/5487021d1004b6d47aa5368be8bfc943a0e1b97f))
+* read the import queues from DATA_DIR ([c4824a6](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/c4824a6d5f37ed829448582023968ce7fc86e5bb))
+* size the worker pool by the container's CPU quota, not the host's cores ([dc51959](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/dc519591bd1808a339529e4f1f06563ddfc5d089))
+
+
+### Performance Improvements
+
+* **stats:** refresh from the new molecules only, and spill the sort to disk ([d6dafcf](https://github.com/cheminfo/ocl-cache.cheminfo.org/commit/d6dafcfc8d408cf8e48e5c3710bbb0ed777fc521))
+
 ## [1.1.1](https://github.com/cheminfo/ocl-cache/compare/v1.1.0...v1.1.1) (2025-04-02)
 
 
