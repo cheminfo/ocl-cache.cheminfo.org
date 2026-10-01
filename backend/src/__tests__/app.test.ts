@@ -82,6 +82,27 @@ test('the root serves the page, titled as the search', async () => {
   );
 });
 
+/** The words a crawler reads in the page, with the markup taken out. */
+function bodyText(html: string): string {
+  return (
+    /<noscript>(?<text>[\s\S]*?)<\/noscript>/.exec(html)?.groups?.text ?? ''
+  )
+    .replaceAll(/<[^>]+>/g, ' ')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
+}
+
+test("each address carries its own text, not the home page's", async () => {
+  const home = await app.inject({ method: 'GET', url: '/' });
+  const about = await app.inject({ method: 'GET', url: '/about' });
+
+  // Both carry the menu; what must differ is the text above it, or a search
+  // engine is handed one page under every address of the site.
+  expect(bodyText(home.body)).not.toBe(bodyText(about.body));
+  expect(bodyText(home.body).length).toBeGreaterThan(0);
+  expect(bodyText(about.body)).toContain('About');
+});
+
 test('a blank SITE_URL falls back to the requested host', async () => {
   // `SITE_URL: ${SITE_URL:-}` in the compose files hands a deployment that
   // names no address an empty string, which is not absent: read as an origin

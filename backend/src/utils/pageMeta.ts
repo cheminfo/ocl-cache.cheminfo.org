@@ -7,7 +7,11 @@
  * an address opens and the prose naming it.
  */
 
-import type { NoscriptRoute, RouteMeta } from 'react-cheminfo/core';
+import type {
+  NoscriptRoute,
+  PageContent,
+  RouteMeta,
+} from 'react-cheminfo/core';
 import {
   PAGE_BODY_MARKER,
   PAGE_HEAD_MARKER,
@@ -40,9 +44,9 @@ const STATISTICS: RouteMeta = {
 
 const ABOUT: RouteMeta = {
   path: '/about',
-  title: 'About — what computes the properties, and under what licence',
+  title: 'About — what computes the molecule properties',
   description:
-    'What ocl-cache.cheminfo.org computes molecule properties with, the borrowed work it stands on, its licence, and where to report a problem.',
+    'What ocl-cache.cheminfo.org computes molecule properties with, the borrowed work it stands on, and the papers to cite when it helped.',
 };
 
 /** Every page the site routes, which is also what the sitemap lists. */
@@ -56,7 +60,7 @@ const NOSCRIPT_ROUTES: readonly NoscriptRoute[] = [
     short: 'Statistics',
     note: 'what the cache holds, and when it arrived',
   },
-  { ...ABOUT, short: 'About', note: 'what it is built on, and its licence' },
+  { ...ABOUT, short: 'About', note: 'what it is built on, and how to cite it' },
   { path: '/docs', title: 'API documentation', description: WHAT_IT_DOES },
 ];
 
@@ -92,17 +96,23 @@ export function injectPageMeta(
 }
 
 /**
- * Write the crawl path into the page the server hands out. It is the same on
- * every address, so it is written once when the page is read rather than per
- * request.
+ * Write the crawl path into the page the server hands out, with the text of the
+ * address being served above it.
+ *
+ * Without that text every address ships one body — this menu, byte for byte —
+ * and a search engine handed the same text under every address of the site
+ * clusters them into a single result.
  * @param html - The built page, carrying `<!--cheminfo:body-->`.
+ * @param content - What the page being served says for itself.
+ * @default undefined — the body is the menu alone
  * @returns The page, with the index a visitor without JavaScript reads.
  */
-export function injectCrawlPath(html: string): string {
+export function injectCrawlPath(html: string, content?: PageContent): string {
   return fill(
     html,
     PAGE_BODY_MARKER,
     noscriptIndex({
+      content,
       site: SITE,
       routes: NOSCRIPT_ROUTES,
       heading: 'ocl-cache.cheminfo.org — cached molecule properties',

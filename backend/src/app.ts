@@ -13,12 +13,18 @@ import type {
   FastifyServerOptions,
 } from 'fastify';
 import createFastify from 'fastify';
+import type { RouteMeta } from 'react-cheminfo/core';
 import { robotsTxt } from 'react-cheminfo/core';
 
 import { SITE } from './site.ts';
 import type { FastifyTyped } from './types.ts';
 import { injectTrackingScript } from './utils/injectTrackingScript.ts';
-import { ROUTES, injectCrawlPath, injectPageMeta } from './utils/pageMeta.ts';
+import {
+  ROUTES,
+  injectCrawlPath,
+  injectPageMeta,
+  pageMetaFor,
+} from './utils/pageMeta.ts';
 import { parseTrustProxy } from './utils/parseTrustProxy.ts';
 import { buildSitemap } from './utils/sitemap.ts';
 import v1 from './v1/v1.ts';
@@ -144,14 +150,28 @@ function registerFrontend(
   root: string,
   options: { trackingScript?: string; siteUrl?: string },
 ): void {
-  // The crawl path is the same on every address, so it is written once here
-  // and the head is written per request below.
-  const index = injectCrawlPath(
-    injectTrackingScript(
-      readFileSync(join(root, 'index.html'), 'utf8'),
-      options.trackingScript,
-    ),
+  // The built page is a template: the head and the crawl path are both written
+  // per address below. The crawl path used to be written once here, which made
+  // every address ship the same body and left a search engine with only the
+  // title to tell the pages of the site apart.
+  const template = injectTrackingScript(
+    readFileSync(join(root, 'index.html'), 'utf8'),
+    options.trackingScript,
   );
+
+  // One page per address, built the first time it is asked for: the body is the
+  // same for every visitor, so it is worth keeping rather than rebuilding.
+  const pages = new Map<string, string>();
+  const pageFor = (meta: RouteMeta): string => {
+    const built = pages.get(meta.path);
+    if (built !== undefined) return built;
+    const page = injectCrawlPath(template, {
+      heading: meta.title,
+      paragraphs: [meta.description],
+    });
+    pages.set(meta.path, page);
+    return page;
+  };
 
   // Blank, not absent: the compose files pass `SITE_URL: ${SITE_URL:-}`, so a
   // deployment that names no address hands this an empty string.
@@ -159,11 +179,12 @@ function registerFrontend(
     options.siteUrl?.trim() || `${request.protocol}://${request.host}`;
 
   const sendIndex = (request: FastifyRequest, reply: FastifyReply) =>
-    reply
-      .type('text/html; charset=utf-8')
-      .send(
-        injectPageMeta(index, { url: request.url, origin: originOf(request) }),
-      );
+    reply.type('text/html; charset=utf-8').send(
+      injectPageMeta(pageFor(pageMetaFor(request.url)), {
+        url: request.url,
+        origin: originOf(request),
+      }),
+    );
 
   // `index: false` so the raw built page, which carries neither head nor crawl
   // path, is never served in place of the written one.
