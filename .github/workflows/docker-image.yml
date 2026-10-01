@@ -10,3 +10,13 @@ jobs:
   docker-image:
     # Documentation: https://github.com/zakodium/workflows#docker-image
     uses: zakodium/workflows/.github/workflows/docker-image.yml@docker-image-v1
+    with:
+      # Without this the image is only ever published as `HEAD`, and `latest` is
+      # not published at all: the shared workflow derives `1.2.3`, `1.2`, `1`
+      # and `latest` from this input, and defaults `tag-latest` to false when it
+      # is absent. Compose defaults to `${IMAGE_TAG:-latest}`, so a package with
+      # no `latest` cannot be pulled by a plain `docker compose up -d`.
+      #
+      # Guarded on the event: a tag push gives `v1.2.3`, while a manual run
+      # would otherwise hand the branch name to a field that is split as semver.
+      tag-version: ${{ github.event_name == 'push' && github.ref_name || '' }}
